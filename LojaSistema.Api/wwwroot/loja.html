@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nana Modas</title>
+    <link rel="stylesheet" href="/loja.css?v=20260620-1">
+</head>
+<body>
+    <div class="promo-bar">
+        <span id="storePromoText">Primeira compra na Nana Modas? Use o cupom NANA5 para 5% OFF acima de R$ 200,00.</span>
+    </div>
+
+    <header class="store-header">
+        <div class="header-main">
+            <button class="header-action" type="button" data-store-tab="catalog" data-store-focus-search="true">Buscar</button>
+
+            <a class="store-brand" href="/loja.html#inicio" aria-label="Página inicial da Nana Modas" data-store-home>
+                <span>NM</span>
+                <strong>Nana Modas</strong>
+            </a>
+
+            <button class="header-bag" type="button" data-store-tab="bag">
+                Sacola
+                <span id="storeHeaderCartCount">0</span>
+            </button>
+        </div>
+
+        <nav class="store-nav" aria-label="Navegação da loja">
+            <button class="store-nav-button is-active" type="button" data-store-tab="home">Início</button>
+            <button class="store-nav-button" type="button" data-store-tab="catalog">Produtos</button>
+            <button class="store-nav-button" type="button" data-store-tab="catalog" data-store-category-name="Vestuário">Vestuário</button>
+            <button class="store-nav-button" type="button" data-store-tab="catalog" data-store-category-name="Acessórios">Acessórios</button>
+            <button class="store-nav-button" type="button" data-store-tab="catalog" data-store-collection="launches">Lançamentos</button>
+            <button class="store-nav-button" type="button" data-store-tab="shipping">Frete</button>
+            <button class="store-nav-button" type="button" data-store-tab="account">Entrar</button>
+            <button class="store-nav-button" type="button" data-store-tab="orders">Meus pedidos</button>
+            <button class="store-nav-button" type="button" data-store-tab="privacy">Privacidade</button>
+            <button class="store-nav-button" type="button" data-store-tab="bag">Meu carrinho</button>
+        </nav>
+    </header>
+
+    <main class="store-main">
+        <section class="store-view is-active store-home-view" data-store-view="home" id="inicio">
+            <section class="store-hero" id="storeHero" aria-labelledby="storeTitle">
+                <div class="hero-copy">
+                    <p class="store-eyebrow" id="heroEyebrow">Coleção pronta entrega</p>
+                    <h1 id="storeTitle">Nana Modas</h1>
+                    <p id="heroDescription">Peças selecionadas, estética premium e compra online integrada ao estoque da loja física.</p>
+                    <div class="hero-actions">
+                        <button class="checkout-button" id="heroPrimaryButton" type="button" data-store-tab="catalog">Ver coleção</button>
+                        <button class="ghost-button" id="heroSecondaryButton" type="button" data-store-tab="bag">Minha sacola</button>
+                    </div>
+                    <div class="hero-proof">
+                        <span>Estoque real</span>
+                        <span>Atendimento direto</span>
+                        <span>Pedido acompanhado</span>
+                    </div>
+                </div>
+
+                <div class="hero-card" aria-label="Resumo da loja Nana Modas">
+                    <div class="hero-card-footer">
+                        <div>
+                            <span>Peças online</span>
+                            <strong id="storeProductCount">0</strong>
+                        </div>
+                        <div>
+                            <span>Na sacola</span>
+                            <strong id="storeCartCount">0</strong>
+                        </div>
+                        <div>
+                            <span>Status</span>
+                            <strong id="storeStatus">Carregando</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="trust-strip" aria-label="Benefícios da loja">
+                <div>
+                    <strong>Loja verificada</strong>
+                    <span>Atendimento direto da Nana Modas</span>
+                </div>
+                <div>
+                    <strong>Pagamento seguro</strong>
+                    <span>Pix com QR Code e cartão</span>
+                </div>
+                <div>
+                    <strong>Estoque real</strong>
+                    <span>Online e loja física integrados</span>
+                </div>
+                <div>
+                    <strong>Pedido acompanhado</strong>
+                    <span>Status e histórico na conta</span>
+                </div>
+            </section>
+
+            <section class="home-confidence" aria-label="Compra segura Nana Modas">
+                <div>
+                    <span>01</span>
+                    <strong>Compra com registro</strong>
+                    <p>Pedido salvo, histórico para cliente e acompanhamento pelo painel.</p>
+                </div>
+                <div>
+                    <span>02</span>
+                    <strong>Pagamento orientado</strong>
+                    <p>Pix com QR Code quando configurado e cartão com link seguro.</p>
+                </div>
+                <div>
+                    <span>03</span>
+                    <strong>Entrega combinada</strong>
+                    <p>Frete estimado no site e confirmação direta com a loja.</p>
+                </div>
+            </section>
+
+            <section class="site-campaign" id="siteCampaign">
+                <div class="campaign-copy">
+                    <p class="store-eyebrow">Campanha</p>
+                    <h2 id="siteCampaignTitle">Coleção premium pronta entrega</h2>
+                    <p id="siteCampaignDescription">Peças selecionadas, atendimento direto e checkout conectado ao estoque real da loja.</p>
+                    <button class="checkout-button" id="siteCampaignButton" type="button" data-store-tab="catalog" data-store-collection="launches">Ver novidades</button>
+                </div>
+                <div class="campaign-media" id="siteCampaignMedia"></div>
+            </section>
+
+            <section class="visual-showcase" id="visualShowcase" aria-label="Vitrines da Nana Modas"></section>
+
+            <section class="home-section">
+                <div class="section-heading home-section-heading">
+                    <p class="store-eyebrow">Curadoria Nana Modas</p>
+                    <h2>Destaques da loja</h2>
+                    <span>Peças escolhidas para abrir a vitrine online com estoque disponível.</span>
+                </div>
+                <div class="product-grid home-product-grid" id="homeFeaturedProducts"></div>
+                <div class="home-section-actions">
+                    <button class="ghost-button" type="button" data-store-tab="catalog">Ver todos os produtos</button>
+                </div>
+            </section>
+
+            <section class="home-category-band">
+                <div>
+                    <p class="store-eyebrow">Departamentos</p>
+                    <h2>Compre por categoria</h2>
+                </div>
+                <div class="home-category-grid" id="homeCategoryGrid"></div>
+            </section>
+
+            <section class="home-section">
+                <div class="section-heading home-section-heading">
+                    <p class="store-eyebrow">Novidades</p>
+                    <h2>Lançamentos</h2>
+                    <span>Uma seleção rápida para quem quer chegar direto nas peças mais recentes da vitrine.</span>
+                </div>
+                <div class="product-grid home-product-grid" id="homeLaunchProducts"></div>
+                <div class="home-section-actions">
+                    <button class="checkout-button" type="button" data-store-tab="catalog" data-store-collection="launches">Ver lançamentos</button>
+                </div>
+            </section>
+
+            <section class="home-assurance">
+                <article>
+                    <span>01</span>
+                    <strong>Compra acompanhada</strong>
+                    <p>O pedido fica registrado na sua conta e pode ser acompanhado pela área Meus pedidos.</p>
+                </article>
+                <article>
+                    <span>02</span>
+                    <strong>Estoque integrado</strong>
+                    <p>As peças vendidas online e no PDV baixam do mesmo estoque da Nana Modas.</p>
+                </article>
+                <article>
+                    <span>03</span>
+                    <strong>Atendimento próximo</strong>
+                    <p>Pagamento, entrega e dúvidas podem ser confirmados diretamente com a loja.</p>
+                </article>
+            </section>
+
+            <section class="store-contact-strip" id="storeContactStrip">
+                <div>
+                    <p class="store-eyebrow">Atendimento</p>
+                    <h2>Fale com a Nana Modas</h2>
+                    <span>Use os canais oficiais da loja para tirar dúvidas sobre peças, entrega e pagamento.</span>
+                </div>
+                <div class="store-contact-actions" id="storeContactActions"></div>
+            </section>
+        </section>
+
+        <div class="store-tabbar" aria-label="Escolha uma área da loja">
+            <button class="store-tab is-active" type="button" data-store-tab="home">Início</button>
+            <button class="store-tab" type="button" data-store-tab="catalog">Coleção</button>
+            <button class="store-tab" type="button" data-store-tab="shipping">Frete</button>
+            <button class="store-tab" type="button" data-store-tab="account">Conta</button>
+            <button class="store-tab" type="button" data-store-tab="orders">Pedidos</button>
+            <button class="store-tab" type="button" data-store-tab="bag">
+                Sacola
+                <span id="storeTabCartCount">0</span>
+            </button>
+        </div>
+
+        <section class="store-view" data-store-view="catalog" id="produtos">
+            <div class="catalog-main">
+                <div class="section-heading">
+                    <p class="store-eyebrow">Destaques</p>
+                    <h2 id="catalogTitle">Escolha suas peças</h2>
+                    <span id="catalogSubtitle">Use os filtros para encontrar o que combina com seu momento.</span>
+                </div>
+
+                <div class="catalog-toolbar">
+                    <label class="search-box">
+                        <span>Buscar</span>
+                        <input id="storeSearch" type="search" placeholder="Nome, categoria ou detalhe">
+                    </label>
+                    <label class="search-box compact-filter">
+                        <span>Preço mín.</span>
+                        <input id="storeMinPrice" type="number" min="0" step="1" placeholder="R$ 0">
+                    </label>
+                    <label class="search-box compact-filter">
+                        <span>Preço máx.</span>
+                        <input id="storeMaxPrice" type="number" min="0" step="1" placeholder="R$ 300">
+                    </label>
+                    <label class="search-box compact-filter">
+                        <span>Tamanho</span>
+                        <select id="storeSizeFilter"></select>
+                    </label>
+                    <label class="search-box compact-filter">
+                        <span>Cor</span>
+                        <select id="storeColorFilter"></select>
+                    </label>
+                    <label class="search-box compact-filter">
+                        <span>Status</span>
+                        <select id="storeAvailabilityFilter">
+                            <option value="available">Disponíveis</option>
+                            <option value="all">Todos</option>
+                            <option value="low">Últimas peças</option>
+                        </select>
+                    </label>
+                    <button class="ghost-button" id="clearStoreFilters" type="button">Limpar filtros</button>
+                </div>
+
+                <div class="category-tabs" id="storeCategories"></div>
+                <div class="product-grid" id="storeProducts"></div>
+            </div>
+        </section>
+
+        <section class="store-view" data-store-view="product" id="produto">
+            <div class="product-detail" id="storeProductDetail"></div>
+        </section>
+
+        <section class="store-view" data-store-view="bag" id="sacola">
+            <div class="bag-layout">
+                <section class="bag-panel">
+                    <div class="checkout-header">
+                        <div>
+                            <p class="store-eyebrow">Sua seleção</p>
+                            <h2>Sacola de compras</h2>
+                        </div>
+                        <button class="clear-cart" id="clearStoreCart" type="button">Limpar sacola</button>
+                    </div>
+
+                    <div class="cart-lines" id="storeCartList"></div>
+
+                    <div class="bag-actions">
+                        <button class="ghost-button" id="continueShoppingButton" type="button">Continuar comprando</button>
+                    </div>
+                </section>
+
+                <div class="checkout-card">
+                    <div class="checkout-header">
+                        <div>
+                            <p class="store-eyebrow">Checkout</p>
+                            <h2>Finalizar compra</h2>
+                        </div>
+                    </div>
+
+                    <div class="coupon-box">
+                        <label for="storeCouponCode">
+                            Cupom
+                            <input id="storeCouponCode" type="text" placeholder="NANA5" autocomplete="off">
+                        </label>
+                        <button class="ghost-button" id="applyStoreCoupon" type="button">Aplicar</button>
+                        <span id="storeCouponMessage"></span>
+                    </div>
+
+                    <div class="checkout-total">
+                        <span>Subtotal</span>
+                        <strong id="storeCartSubtotal">R$ 0,00</strong>
+                    </div>
+
+                    <div class="checkout-total checkout-discount hidden" id="storeCartDiscountRow">
+                        <span>Desconto</span>
+                        <strong id="storeCartDiscount">- R$ 0,00</strong>
+                    </div>
+
+                    <div class="checkout-total checkout-shipping-row hidden" id="storeCartShippingRow">
+                        <span>Entrega</span>
+                        <strong id="storeCartShipping">R$ 0,00</strong>
+                    </div>
+
+                    <div class="checkout-total checkout-total-main">
+                        <span>Total</span>
+                        <strong id="storeCartTotal">R$ 0,00</strong>
+                    </div>
+
+                    <div class="checkout-shipping">
+                        <div>
+                            <span>Frete</span>
+                            <strong id="storeCheckoutShipping">Calcule pelo CEP</strong>
+                        </div>
+                        <button class="ghost-button" type="button" data-store-tab="shipping">Calcular</button>
+                    </div>
+
+                    <div class="checkout-trust">
+                        <span>Compra segura com estoque integrado</span>
+                        <span>Você recebe confirmação do pedido e pode acompanhar em Meus pedidos</span>
+                    </div>
+
+                    <form class="checkout-form" id="storeCheckoutForm">
+                        <div class="checkout-step">
+                            <span>1</span>
+                            <strong>Dados do cliente</strong>
+                        </div>
+                        <label>
+                            Nome completo
+                            <input id="customerName" type="text" autocomplete="name" required>
+                        </label>
+
+                        <label>
+                            E-mail
+                            <input id="customerEmail" type="email" autocomplete="email" required>
+                        </label>
+
+                        <label>
+                            Telefone
+                            <input id="customerPhone" type="tel" autocomplete="tel">
+                        </label>
+
+                        <label>
+                            CPF/CNPJ para pagamento
+                            <input id="customerDocument" type="text" inputmode="numeric" autocomplete="off" placeholder="Somente para gerar Pix automático">
+                        </label>
+
+                        <div class="checkout-step">
+                            <span>2</span>
+                            <strong>Endereço de entrega</strong>
+                        </div>
+                        <div class="address-grid">
+                            <label>
+                                CEP
+                                <input id="customerCep" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000">
+                            </label>
+
+                            <label class="address-street">
+                                Rua
+                                <input id="customerStreet" type="text" autocomplete="address-line1" required>
+                            </label>
+
+                            <label>
+                                Número
+                                <input id="customerNumber" type="text" autocomplete="address-line2" required>
+                            </label>
+
+                            <label>
+                                Complemento
+                                <input id="customerComplement" type="text" autocomplete="address-line3">
+                            </label>
+
+                            <label>
+                                Bairro
+                                <input id="customerDistrict" type="text" required>
+                            </label>
+
+                            <label>
+                                Cidade
+                                <input id="customerCity" type="text" autocomplete="address-level2" required>
+                            </label>
+
+                            <label>
+                                Estado
+                                <input id="customerState" type="text" maxlength="2" autocomplete="address-level1" required>
+                            </label>
+                        </div>
+
+                        <label>
+                            Observação do pedido
+                            <textarea id="customerOrderNote" rows="3" placeholder="Ex: entregar no período da tarde"></textarea>
+                        </label>
+
+                        <div class="checkout-step">
+                            <span>3</span>
+                            <strong>Pagamento</strong>
+                        </div>
+                        <fieldset>
+                            <legend>Pagamento</legend>
+                            <div class="payment-tabs">
+                                <label id="storePixPaymentOption"><input id="storePaymentPix" type="radio" name="storePayment" value="Pix" checked> Pix</label>
+                                <label id="storeCardPaymentOption"><input id="storePaymentCard" type="radio" name="storePayment" value="CartaoCredito"> Cartão</label>
+                            </div>
+                            <div class="payment-help" id="storePaymentHelp"></div>
+                        </fieldset>
+
+                        <button class="checkout-button" id="storeCheckoutButton" type="submit">Finalizar compra</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section class="store-view" data-store-view="shipping" id="frete">
+            <div class="store-info-layout">
+                <section class="info-panel">
+                    <div class="section-heading">
+                        <p class="store-eyebrow">Entrega</p>
+                        <h2>Calcular frete</h2>
+                        <span id="shippingMessage">Entrega combinada com a loja.</span>
+                    </div>
+
+                    <form class="checkout-form" id="shippingForm">
+                        <label>
+                            CEP
+                            <input id="shippingCep" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" required>
+                        </label>
+
+                        <div class="address-grid">
+                            <label>
+                                Bairro
+                                <input id="shippingDistrict" type="text" autocomplete="address-level3" placeholder="Opcional">
+                            </label>
+
+                            <label>
+                                Cidade
+                                <input id="shippingCity" type="text" autocomplete="address-level2" placeholder="Opcional">
+                            </label>
+
+                            <label>
+                                UF
+                                <input id="shippingState" type="text" maxlength="2" autocomplete="address-level1" placeholder="SP">
+                            </label>
+                        </div>
+
+                        <button class="checkout-button" type="submit">Calcular frete</button>
+                    </form>
+                </section>
+
+                <aside class="info-panel accent-panel">
+                    <p class="store-eyebrow">Resumo</p>
+                    <h2>Entrega Nana Modas</h2>
+                    <div class="shipping-result" id="shippingResult">
+                        <span>Informe o CEP para ver o valor estimado.</span>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <section class="store-view" data-store-view="account" id="cliente">
+            <div class="store-info-layout">
+                <section class="info-panel">
+                    <div class="section-heading">
+                        <p class="store-eyebrow">Cliente</p>
+                        <h2>Minha conta</h2>
+                        <span id="customerLoginMessage">Entre para deixar o checkout mais rápido.</span>
+                    </div>
+
+                    <form class="checkout-form" id="customerLoginForm">
+                        <label>
+                            Nome completo
+                            <input id="accountName" type="text" autocomplete="name" required>
+                        </label>
+
+                        <label>
+                            E-mail
+                            <input id="accountEmail" type="email" autocomplete="email" required>
+                        </label>
+
+                        <label>
+                            Telefone
+                            <input id="accountPhone" type="tel" autocomplete="tel">
+                        </label>
+
+                        <label>
+                            Senha
+                            <input id="accountPassword" type="password" autocomplete="current-password" required>
+                        </label>
+
+                        <button class="checkout-button" id="customerLoginButton" type="submit">Entrar ou criar conta</button>
+                        <button class="ghost-button hidden" id="customerLogoutButton" type="button">Sair da conta</button>
+                    </form>
+
+                    <form class="checkout-form password-reset-box" id="customerPasswordResetForm">
+                        <p class="store-eyebrow">Esqueci minha senha</p>
+                        <label>
+                            E-mail cadastrado
+                            <input id="resetEmail" type="email" autocomplete="email" placeholder="seu@email.com">
+                        </label>
+                        <button class="ghost-button" id="requestResetButton" type="button">Enviar código</button>
+                        <label>
+                            Código recebido
+                            <input id="resetCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="000000">
+                        </label>
+                        <label>
+                            Nova senha
+                            <input id="resetNewPassword" type="password" autocomplete="new-password" minlength="6">
+                        </label>
+                        <button class="checkout-button" id="confirmResetButton" type="submit">Trocar senha</button>
+                        <span id="resetPasswordMessage"></span>
+                    </form>
+                </section>
+
+                <aside class="info-panel accent-panel" id="customerAccountSummary">
+                    <p class="store-eyebrow">Status</p>
+                    <h2>Visitante</h2>
+                    <span>Entre com e-mail e senha para preencher o checkout automaticamente.</span>
+                </aside>
+            </div>
+        </section>
+
+        <section class="store-view" data-store-view="orders" id="pedidos">
+            <section class="orders-panel">
+                <div class="checkout-header">
+                    <div>
+                        <p class="store-eyebrow">Cliente</p>
+                        <h2>Meus pedidos</h2>
+                    </div>
+                    <span class="orders-count" id="customerOrdersSummary">0 pedidos</span>
+                </div>
+
+                <div class="order-history" id="customerOrders"></div>
+            </section>
+        </section>
+
+        <section class="store-view" data-store-view="privacy" id="privacidade">
+            <article class="info-panel privacy-panel">
+                <div class="section-heading">
+                    <p class="store-eyebrow">Dados do cliente</p>
+                    <h2>Política de privacidade</h2>
+                </div>
+                <div class="privacy-copy" id="privacyPolicyText"></div>
+            </article>
+        </section>
+    </main>
+
+    <footer class="store-footer">
+        <div>
+            <a class="footer-brand" href="/loja.html">Nana Modas</a>
+            <span>Moda feminina com estoque integrado entre loja online e física.</span>
+        </div>
+
+        <nav class="footer-links" aria-label="Links do rodapé">
+            <button type="button" data-store-tab="home">Início</button>
+            <button type="button" data-store-tab="catalog">Produtos</button>
+            <button type="button" data-store-tab="shipping">Frete</button>
+            <button type="button" data-store-tab="account">Minha conta</button>
+            <button type="button" data-store-tab="orders">Meus pedidos</button>
+            <button type="button" data-store-tab="privacy">Privacidade</button>
+        </nav>
+
+        <div class="footer-contact" id="footerContact"></div>
+
+        <p>Site criado por <strong id="siteCreatorName">Davi Silva Dias</strong></p>
+    </footer>
+
+    <div class="order-modal hidden" id="orderModal" role="dialog" aria-modal="true" aria-labelledby="orderTitle">
+        <div class="order-modal-card">
+            <span class="success-mark">OK</span>
+            <h2 id="orderTitle">Pedido confirmado</h2>
+            <p id="orderMessage"></p>
+            <div class="order-summary-box" id="orderSummary"></div>
+            <div class="order-payment-box hidden" id="orderPaymentBox">
+                <img class="pix-qr-image hidden" id="orderPixQrCode" alt="QR Code Pix do pedido">
+                <span>Pix copia e cola</span>
+                <strong id="orderPixKey"></strong>
+                <p id="orderPixInstructions"></p>
+                <button class="ghost-button" id="copyPixKeyButton" type="button">Copiar Pix</button>
+            </div>
+            <div class="order-payment-box hidden" id="orderCardPaymentBox">
+                <span id="orderCardPaymentTitle">Pagamento no cartão</span>
+                <strong id="orderCardPaymentName"></strong>
+                <p id="orderCardPaymentInstructions"></p>
+                <button class="ghost-button" id="openCardPaymentButton" type="button">Abrir pagamento</button>
+            </div>
+            <div class="order-modal-actions">
+                <button class="ghost-button" id="copyOrderSummaryButton" type="button">Copiar pedido</button>
+                <button class="ghost-button" id="printOrderReceiptButton" type="button">Imprimir recibo</button>
+                <button class="ghost-button whatsapp-link" id="whatsappOrderButton" type="button">
+                    <span class="whatsapp-mini-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <path d="M7.4 18.4 4 19.2l.9-3.2A7.7 7.7 0 1 1 7.4 18.4Z"></path>
+                            <path d="M9.3 8.2c.2-.3.4-.4.7-.4h.5c.2 0 .4.1.5.4l.6 1.4c.1.2.1.5-.1.7l-.4.5c.5.9 1.2 1.6 2.1 2.1l.5-.4c.2-.2.5-.2.7-.1l1.4.6c.3.1.4.3.4.6v.5c0 .3-.1.5-.4.7-.4.2-.9.4-1.4.4-2.9-.1-5.4-2.5-5.5-5.5 0-.5.1-1 .4-1.4Z"></path>
+                        </svg>
+                    </span>
+                    <span>Enviar WhatsApp</span>
+                </button>
+                <button class="ghost-button" id="emailOrderButton" type="button">Enviar e-mail</button>
+                <button class="ghost-button" id="goToOrdersButton" type="button">Ver meus pedidos</button>
+                <button class="checkout-button" id="closeOrderModal" type="button">Continuar comprando</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="store-toast" id="storeToast" role="status" aria-live="polite"></div>
+
+    <script src="/loja.js?v=20260620-1" defer></script>
+</body>
+</html>

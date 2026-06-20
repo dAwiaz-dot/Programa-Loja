@@ -1,0 +1,34 @@
+@LojaSistema.Api_HostAddress = http://localhost:5057
+
+GET {{LojaSistema.Api_HostAddress}}/
+Accept: application/json
+
+###
+
+GET {{LojaSistema.Api_HostAddress}}/categorias
+Accept: application/json
+
+###
+
+GET {{LojaSistema.Api_HostAddress}}/produtos
+Accept: application/json
+
+###
+
+POST {{LojaSistema.Api_HostAddress}}/pdv/vendas
+Content-Type: application/json
+
+{
+  "formaPagamento": "Pix",
+  "itens": [
+    {
+      "produtoId": "troque-pelo-id-do-produto",
+      "quantidade": 1
+    }
+  ]
+}
+
+###
+
+GET {{LojaSistema.Api_HostAddress}}/relatorios/resumo
+Accept: application/json

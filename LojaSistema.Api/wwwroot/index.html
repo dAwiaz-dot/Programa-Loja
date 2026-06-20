@@ -1,0 +1,1444 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nana Modas Admin</title>
+    <link rel="stylesheet" href="/styles.css?v=20260620-1">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">NM</div>
+                <div>
+                    <strong>Nana Modas</strong>
+                    <span>Admin, PDV e estoque</span>
+                </div>
+            </div>
+
+            <nav class="nav-list" aria-label="Navegação principal">
+                <span class="nav-section-label">Operação</span>
+                <button class="nav-link is-active" type="button" data-view-target="dashboard">Visão geral</button>
+                <button class="nav-link" type="button" data-view-target="products">Produtos</button>
+                <button class="nav-link" type="button" data-view-target="pdv">PDV</button>
+                <button class="nav-link" type="button" data-view-target="stock">Estoque</button>
+                <button class="nav-link" type="button" data-view-target="onlineOrders">Pedidos online</button>
+                <span class="nav-section-label">Loja online</span>
+                <button class="nav-link" type="button" data-view-target="storefront">Site da loja</button>
+                <button class="nav-link" type="button" data-view-target="siteImages">Imagens do site</button>
+                <button class="nav-link" type="button" data-view-target="siteContact">Contato do site</button>
+                <span class="nav-section-label">Gestão</span>
+                <button class="nav-link" type="button" data-view-target="customers">Clientes</button>
+                <button class="nav-link" type="button" data-view-target="reports">Relatórios</button>
+                <button class="nav-link" type="button" data-view-target="users">Usuários</button>
+            </nav>
+        </aside>
+
+        <main class="main-area">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Painel operacional</p>
+                    <h1 id="pageTitle">Visão geral</h1>
+                </div>
+                <div class="topbar-actions">
+                    <span class="status-pill" id="userProfileBadge">Perfil</span>
+                    <span class="status-pill" id="apiStatus">Conectando</span>
+                    <a class="button button-secondary" href="/loja.html">Ver site da loja</a>
+                    <button class="button button-secondary" id="refreshButton" type="button">Atualizar</button>
+                    <button class="button button-ghost" id="logoutButton" type="button">Sair</button>
+                </div>
+            </header>
+
+            <section class="view is-active" data-view="dashboard">
+                <div class="metric-grid">
+                    <article class="metric-card">
+                        <span>Faturamento total</span>
+                        <strong id="metricRevenue">R$ 0,00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Vendas PDV</span>
+                        <strong id="metricSales">0</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Pedidos online</span>
+                        <strong id="metricOnlineOrders">0</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Produtos ativos</span>
+                        <strong id="metricActiveProducts">0</strong>
+                    </article>
+                    <article class="metric-card metric-alert">
+                        <span>Estoque baixo</span>
+                        <strong id="metricLowStock">0</strong>
+                    </article>
+                </div>
+
+                <section class="operation-hub" aria-label="Atalhos do painel">
+                    <div>
+                        <p class="eyebrow">Fluxo do dia</p>
+                        <h2>Admin organizado por área</h2>
+                        <span>Use os atalhos para cuidar da loja online, PDV, estoque, pedidos e relatórios sem procurar no menu.</span>
+                    </div>
+                    <div class="hub-actions">
+                        <button type="button" data-view-target="storefront">Publicar produtos</button>
+                        <button type="button" data-view-target="onlineOrders">Ver pedidos</button>
+                        <button type="button" data-view-target="stock">Repor estoque</button>
+                        <button type="button" data-view-target="reports">Analisar vendas</button>
+                    </div>
+                </section>
+
+                <div class="workspace-grid">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Ações pendentes</h2>
+                            <span class="panel-note">Atalhos do dia</span>
+                        </div>
+                        <div class="compact-list" id="pendingActionsList"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Produtos em atenção</h2>
+                            <span class="panel-note">3 unidades ou menos</span>
+                        </div>
+                        <div class="compact-list" id="lowStockList"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Últimas vendas</h2>
+                            <span class="panel-note">PDV</span>
+                        </div>
+                        <div class="compact-list" id="recentSalesList"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Últimos pedidos online</h2>
+                            <span class="panel-note">Site</span>
+                        </div>
+                        <div class="compact-list" id="recentOrdersList"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Atividades recentes</h2>
+                            <span class="panel-note">Painel</span>
+                        </div>
+                        <div class="compact-list" id="activityList"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Checklist produção</h2>
+                            <span class="panel-note">Antes de hospedar</span>
+                        </div>
+                        <div class="compact-list" id="productionChecklist"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Próximas melhorias</h2>
+                            <span class="panel-note">Prioridade prática</span>
+                        </div>
+                        <div class="compact-list" id="adminReadinessList"></div>
+                    </section>
+                </div>
+            </section>
+
+            <section class="view" data-view="products">
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Cadastro de produto</h2>
+                            <button class="button button-ghost hidden" id="cancelEditButton" type="button">Cancelar edição</button>
+                        </div>
+
+                        <form class="form-grid" id="productForm">
+                            <input type="hidden" id="productId">
+
+                            <label>
+                                Nome
+                                <input id="productName" name="nome" type="text" autocomplete="off" required>
+                            </label>
+
+                            <label>
+                                Categoria
+                                <select id="productCategory" name="categoriaId" required></select>
+                            </label>
+
+                            <label>
+                                SKU / código
+                                <input id="productSku" name="sku" type="text" autocomplete="off" placeholder="Ex: NM-VEST-PRETO-M">
+                            </label>
+
+                            <label>
+                                Preço
+                                <input id="productPrice" name="preco" type="number" min="0.01" step="0.01" required>
+                            </label>
+
+                            <label>
+                                Custo
+                                <input id="productCost" name="custo" type="number" min="0" step="0.01" placeholder="0,00">
+                            </label>
+
+                            <label>
+                                Estoque inicial
+                                <input id="productInitialStock" name="quantidadeInicial" type="number" min="0" step="1" required>
+                            </label>
+
+                            <label class="form-span">
+                                Descrição
+                                <textarea id="productDescription" name="descricao" rows="3"></textarea>
+                            </label>
+
+                            <label>
+                                Tamanhos
+                                <textarea id="productSizes" name="tamanhos" rows="3" placeholder="P, M, G&#10;ou 36, 38, 40"></textarea>
+                            </label>
+
+                            <label>
+                                Cores
+                                <textarea id="productColors" name="cores" rows="3" placeholder="Preto&#10;Dourado"></textarea>
+                            </label>
+
+                            <label class="form-span">
+                                Modelos
+                                <textarea id="productModels" name="modelos" rows="2" placeholder="Curto, longo, canelado"></textarea>
+                            </label>
+
+                            <div class="variant-editor form-span">
+                                <div class="variant-editor-head">
+                                    <strong>Estoque por variação</strong>
+                                    <button class="button button-secondary" id="addVariantRowButton" type="button">Adicionar variação</button>
+                                </div>
+                                <div class="variant-grid variant-grid-head">
+                                    <span>Tamanho</span>
+                                    <span>Cor</span>
+                                    <span>Modelo</span>
+                                    <span>Qtd.</span>
+                                    <span></span>
+                                </div>
+                                <div class="variant-rows" id="productVariantRows"></div>
+                                <textarea class="hidden" id="productVariantStock" rows="4"></textarea>
+                            </div>
+
+                            <label class="form-span">
+                                Guia de medidas
+                                <textarea id="productSizeGuide" name="guiaMedidas" rows="4" placeholder="P: busto 88 cm, cintura 70 cm&#10;M: busto 94 cm, cintura 76 cm"></textarea>
+                            </label>
+
+                            <label class="form-span">
+                                URL ou caminho da imagem
+                                <input id="productImage" name="imagemUrl" type="text" placeholder="https://... ou /uploads/foto.png">
+                            </label>
+
+                            <label class="form-span">
+                                Foto do dispositivo
+                                <input id="productImageFile" type="file" accept="image/png,image/jpeg,image/webp">
+                            </label>
+
+                            <div class="image-preview form-span" id="productImagePreview">
+                                <span>Nenhuma imagem selecionada</span>
+                            </div>
+
+                            <label class="form-span">
+                                Fotos extras
+                                <textarea id="productExtraImages" name="imagensExtras" rows="3" placeholder="/uploads/foto-2.png&#10;https://site.com/foto-3.jpg"></textarea>
+                            </label>
+
+                            <label class="form-span">
+                                Fotos extras do dispositivo
+                                <input id="productExtraImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+                            </label>
+
+                            <div class="image-preview-grid form-span" id="productExtraImagePreview">
+                                <span>Nenhuma foto extra selecionada</span>
+                            </div>
+
+                            <label class="checkbox-line">
+                                <input id="productActive" type="checkbox" checked>
+                                Produto ativo
+                            </label>
+
+                            <button class="button button-primary form-action" type="submit">Salvar produto</button>
+                        </form>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Categorias</h2>
+                            <span class="panel-note" id="categoryCount">0 cadastradas</span>
+                        </div>
+
+                        <form class="inline-form" id="categoryForm">
+                            <input id="categoryName" type="text" placeholder="Nova categoria" autocomplete="off" required>
+                            <button class="button button-secondary" type="submit">Adicionar</button>
+                        </form>
+
+                        <div class="chip-list" id="categoryList"></div>
+                    </section>
+                </div>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Produtos cadastrados</h2>
+                        <div class="toolbar">
+                            <input class="search-input" id="productSearch" type="search" placeholder="Buscar produto">
+                            <span class="panel-note" id="productCount">0 itens</span>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Categoria</th>
+                                    <th>Preço</th>
+                                    <th>Estoque</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="productsTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <section class="view" data-view="storefront">
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Produtos no site</h2>
+                                <span class="panel-note" id="storefrontCount">0 publicados</span>
+                            </div>
+                            <input class="search-input" id="storefrontSearch" type="search" placeholder="Buscar produto">
+                        </div>
+
+                        <div class="site-product-list" id="storefrontProductList"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Aparência no site</h2>
+                                <span class="panel-note">Independente do estoque</span>
+                            </div>
+                        </div>
+
+                        <form class="form-grid" id="storefrontForm">
+                            <input type="hidden" id="storefrontProductId">
+
+                            <label class="form-span">
+                                Produto do estoque
+                                <select id="storefrontProductSelect" required></select>
+                            </label>
+
+                            <label class="checkbox-line form-span">
+                                <input id="storefrontPublished" type="checkbox">
+                                Aparecer no site
+                            </label>
+
+                            <label class="checkbox-line form-span">
+                                <input id="storefrontFeatured" type="checkbox">
+                                Marcar como destaque
+                            </label>
+
+                            <label class="form-span">
+                                Nome no site
+                                <input id="storefrontName" type="text" autocomplete="off" placeholder="Deixe vazio para usar o nome do estoque">
+                            </label>
+
+                            <label class="form-span">
+                                Descrição no site
+                                <textarea id="storefrontDescription" rows="3" placeholder="Deixe vazio para usar a descrição do estoque"></textarea>
+                            </label>
+
+                            <label>
+                                Preço no site
+                                <input id="storefrontPrice" type="number" min="0.01" step="0.01" placeholder="Mesmo do estoque">
+                            </label>
+
+                            <label>
+                                Ordem
+                                <input id="storefrontOrder" type="number" min="0" step="1" value="0">
+                            </label>
+
+                            <label class="form-span">
+                                Imagem principal do site
+                                <input id="storefrontImage" type="text" placeholder="https://... ou /uploads/foto.png">
+                            </label>
+
+                            <label class="form-span">
+                                Foto principal do dispositivo
+                                <input id="storefrontImageFile" type="file" accept="image/png,image/jpeg,image/webp">
+                            </label>
+
+                            <div class="image-preview form-span" id="storefrontImagePreview">
+                                <span>Nenhuma imagem do site selecionada</span>
+                            </div>
+
+                            <label class="form-span">
+                                Fotos extras do site
+                                <textarea id="storefrontExtraImages" rows="3" placeholder="/uploads/foto-2.png&#10;https://site.com/foto-3.jpg"></textarea>
+                            </label>
+
+                            <label class="form-span">
+                                Fotos extras do dispositivo
+                                <input id="storefrontExtraImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+                            </label>
+
+                            <div class="image-preview-grid form-span" id="storefrontExtraImagePreview">
+                                <span>Nenhuma foto extra do site selecionada</span>
+                            </div>
+
+                            <button class="button button-primary form-action" type="submit">Salvar vitrine</button>
+                        </form>
+                    </section>
+                </div>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Configurações do site</h2>
+                            <span class="panel-note">Rodapé, privacidade, cliente e frete</span>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="siteConfigForm">
+                        <label>
+                            Criador do site
+                            <input id="siteCreatorNameInput" type="text" autocomplete="off" required>
+                        </label>
+
+                        <label>
+                            Frete padrão
+                            <input id="shippingBasePrice" type="number" min="0" step="0.01" required>
+                        </label>
+
+                        <label>
+                            Frete grátis acima de
+                            <input id="shippingFreeThreshold" type="number" min="0" step="0.01" required>
+                        </label>
+
+                        <label>
+                            Prazo mínimo em dias
+                            <input id="shippingMinDays" type="number" min="0" step="1" required>
+                        </label>
+
+                        <label>
+                            Prazo máximo em dias
+                            <input id="shippingMaxDays" type="number" min="0" step="1" required>
+                        </label>
+
+                        <label class="form-span">
+                            Texto da aba de frete
+                            <textarea id="shippingMessageInput" rows="3"></textarea>
+                        </label>
+
+                        <label class="form-span">
+                            Texto da aba de cliente
+                            <textarea id="customerLoginMessageInput" rows="3"></textarea>
+                        </label>
+
+                        <label>
+                            Chamada do banner
+                            <input id="bannerEyebrowInput" type="text" autocomplete="off" placeholder="Coleção pronta entrega">
+                        </label>
+
+                        <label>
+                            Título do banner
+                            <input id="bannerTitleInput" type="text" autocomplete="off" placeholder="Nana Modas">
+                        </label>
+
+                        <label class="form-span">
+                            Descrição do banner
+                            <textarea id="bannerDescriptionInput" rows="3"></textarea>
+                        </label>
+
+                        <label>
+                            Botão principal
+                            <input id="bannerPrimaryButtonInput" type="text" autocomplete="off" placeholder="Ver coleção">
+                        </label>
+
+                        <label>
+                            Botão secundário
+                            <input id="bannerSecondaryButtonInput" type="text" autocomplete="off" placeholder="Minha sacola">
+                        </label>
+
+                        <label class="form-span">
+                            Chave Pix da loja
+                            <input id="pixKeyInput" type="text" autocomplete="off" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+                        </label>
+
+                        <label>
+                            Nome no Pix
+                            <input id="pixReceiverNameInput" type="text" autocomplete="off" maxlength="25" placeholder="NANA MODAS">
+                        </label>
+
+                        <label>
+                            Cidade no Pix
+                            <input id="pixCityInput" type="text" autocomplete="off" maxlength="15" placeholder="SAO PAULO">
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="pixOnlineActiveInput" type="checkbox" checked>
+                            Pix ativo no site
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="cardOnlineActiveInput" type="checkbox" checked>
+                            Cartão ativo no site
+                        </label>
+
+                        <label>
+                            Nome do checkout cartão
+                            <input id="cardCheckoutNameInput" type="text" autocomplete="off" placeholder="Mercado Pago, InfinitePay, PagSeguro">
+                        </label>
+
+                        <label>
+                            Link de pagamento cartão
+                            <input id="cardCheckoutUrlInput" type="url" autocomplete="off" placeholder="https://...">
+                        </label>
+
+                        <label class="form-span">
+                            Mensagem do Pix
+                            <textarea id="paymentMessageInput" rows="3" placeholder="Ex: envie o comprovante pelo WhatsApp para confirmarmos seu pedido."></textarea>
+                        </label>
+
+                        <label class="form-span">
+                            Mensagem do cartão
+                            <textarea id="cardPaymentMessageInput" rows="3" placeholder="Ex: pague pelo link ou aguarde a loja enviar a cobrança."></textarea>
+                        </label>
+
+                        <label class="checkbox-line form-span">
+                            <input id="emailNotificationsActiveInput" type="checkbox">
+                            Enviar e-mails automáticos
+                        </label>
+
+                        <label>
+                            E-mail remetente
+                            <input id="emailSenderInput" type="email" autocomplete="off" placeholder="loja@nanamodas.com">
+                        </label>
+
+                        <label>
+                            E-mail dos pedidos
+                            <input id="emailOrdersInput" type="text" autocomplete="off" placeholder="pedidos@nanamodas.com">
+                        </label>
+
+                        <label>
+                            Servidor SMTP
+                            <input id="smtpHostInput" type="text" autocomplete="off" placeholder="smtp.seudominio.com">
+                        </label>
+
+                        <label>
+                            Porta SMTP
+                            <input id="smtpPortInput" type="number" min="1" max="65535" step="1" value="587">
+                        </label>
+
+                        <label>
+                            Usuário SMTP
+                            <input id="smtpUserInput" type="text" autocomplete="off">
+                        </label>
+
+                        <label>
+                            Senha SMTP
+                            <input id="smtpPasswordInput" type="password" autocomplete="new-password">
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="smtpSslInput" type="checkbox" checked>
+                            SMTP com SSL
+                        </label>
+
+                        <button class="button button-secondary form-action" id="testEmailButton" type="button">Testar e-mail</button>
+
+                        <label class="checkbox-line">
+                            <input id="autoBackupActiveInput" type="checkbox" checked>
+                            Backup automático ativo
+                        </label>
+
+                        <label>
+                            Intervalo do backup (horas)
+                            <input id="autoBackupIntervalInput" type="number" min="1" max="720" step="1" value="24">
+                        </label>
+
+                        <label>
+                            Provedor de pagamento
+                            <select id="paymentGatewayProviderInput">
+                                <option value="">Sem gateway real</option>
+                                <option value="Asaas">Asaas</option>
+                                <option value="MercadoPago">Mercado Pago</option>
+                                <option value="PagSeguro">PagSeguro</option>
+                                <option value="Stripe">Stripe</option>
+                                <option value="InfinitePay">InfinitePay</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="paymentGatewayActiveInput" type="checkbox">
+                            Gateway ativo
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="paymentGatewayProductionInput" type="checkbox">
+                            Modo produção
+                        </label>
+
+                        <label>
+                            Public key
+                            <input id="paymentGatewayPublicKeyInput" type="text" autocomplete="off">
+                        </label>
+
+                        <label>
+                            Access token
+                            <input id="paymentGatewayAccessTokenInput" type="password" autocomplete="new-password" placeholder="Deixe em branco para manter">
+                        </label>
+
+                        <label>
+                            Webhook secret
+                            <input id="paymentGatewayWebhookSecretInput" type="password" autocomplete="new-password" placeholder="Deixe em branco para manter">
+                        </label>
+
+                        <label class="form-span">
+                            URL de webhook
+                            <input id="paymentGatewayWebhookUrlInput" type="url" autocomplete="off" placeholder="https://seudominio.com/pagamentos/asaas/webhook">
+                        </label>
+
+                        <div class="config-note form-span">
+                            <strong>Pagamento real com Asaas</strong>
+                            <span>Para ativar QR Code Pix automático, selecione Asaas, cole o access token, defina um segredo de webhook e use a URL acima no painel do Asaas. Em produção, marque modo produção somente depois de testar uma compra pequena.</span>
+                        </div>
+
+                        <label class="form-span">
+                            Política de privacidade
+                            <textarea id="privacyPolicyInput" rows="6" required></textarea>
+                        </label>
+
+                        <button class="button button-primary form-action" type="submit">Salvar configurações</button>
+                    </form>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Opções de entrega</h2>
+                            <span class="panel-note" id="deliveryOptionCount">0 cadastradas</span>
+                        </div>
+                        <button class="button button-ghost hidden" id="cancelDeliveryEditButton" type="button">Cancelar edição</button>
+                    </div>
+
+                    <form class="form-grid" id="deliveryOptionForm">
+                        <input type="hidden" id="deliveryOptionId">
+
+                        <label>
+                            Nome
+                            <input id="deliveryName" type="text" autocomplete="off" placeholder="Retirada na loja" required>
+                        </label>
+
+                        <label>
+                            Tipo
+                            <select id="deliveryType" required>
+                                <option value="Retirada">Retirada na loja</option>
+                                <option value="EntregaLocal">Entrega local</option>
+                                <option value="Correios">Correios</option>
+                                <option value="Transportadora">Transportadora</option>
+                                <option value="Personalizada">Personalizada</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            Valor
+                            <input id="deliveryPrice" type="number" min="0" step="0.01" placeholder="0,00" required>
+                        </label>
+
+                        <label>
+                            Grátis acima de
+                            <input id="deliveryFreeAbove" type="number" min="0" step="0.01" placeholder="0,00" required>
+                        </label>
+
+                        <label>
+                            Prazo mínimo
+                            <input id="deliveryMinDays" type="number" min="0" step="1" required>
+                        </label>
+
+                        <label>
+                            Prazo máximo
+                            <input id="deliveryMaxDays" type="number" min="0" step="1" required>
+                        </label>
+
+                        <label>
+                            CEP inicial
+                            <input id="deliveryCepStart" type="text" inputmode="numeric" placeholder="00000-000">
+                        </label>
+
+                        <label>
+                            CEP final
+                            <input id="deliveryCepEnd" type="text" inputmode="numeric" placeholder="99999-999">
+                        </label>
+
+                        <label class="form-span">
+                            Descrição
+                            <input id="deliveryDescription" type="text" autocomplete="off" placeholder="Ex: entrega em até 2 dias úteis">
+                        </label>
+
+                        <label>
+                            Cidades atendidas
+                            <textarea id="deliveryCities" rows="3" placeholder="São Paulo&#10;Santo André"></textarea>
+                        </label>
+
+                        <label>
+                            Bairros atendidos
+                            <textarea id="deliveryDistricts" rows="3" placeholder="Centro&#10;Jardins"></textarea>
+                        </label>
+
+                        <label>
+                            Estados
+                            <textarea id="deliveryStates" rows="3" placeholder="SP&#10;RJ"></textarea>
+                        </label>
+
+                        <label>
+                            Ordem
+                            <input id="deliveryOrder" type="number" min="0" step="1" value="0">
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="deliveryActive" type="checkbox" checked>
+                            Entrega ativa
+                        </label>
+
+                        <button class="button button-primary form-action" type="submit">Salvar entrega</button>
+                    </form>
+
+                    <div class="site-product-list delivery-option-list" id="deliveryOptionList"></div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Cupons do site</h2>
+                            <span class="panel-note" id="couponCount">0 cadastrados</span>
+                        </div>
+                        <button class="button button-ghost hidden" id="cancelCouponEditButton" type="button">Cancelar edição</button>
+                    </div>
+
+                    <form class="form-grid" id="couponForm">
+                        <input type="hidden" id="couponId">
+
+                        <label>
+                            Código
+                            <input id="couponCode" type="text" autocomplete="off" placeholder="NANA5" required>
+                        </label>
+
+                        <label>
+                            Desconto em %
+                            <input id="couponPercent" type="number" min="0.01" max="80" step="0.01" placeholder="5" required>
+                        </label>
+
+                        <label>
+                            Compra mínima
+                            <input id="couponMinimum" type="number" min="0" step="0.01" placeholder="200,00" required>
+                        </label>
+
+                        <label>
+                            Validade
+                            <input id="couponValidUntil" type="date">
+                        </label>
+
+                        <label class="form-span">
+                            Descrição
+                            <input id="couponDescription" type="text" autocomplete="off" placeholder="Ex: primeira compra">
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="couponActive" type="checkbox" checked>
+                            Cupom ativo
+                        </label>
+
+                        <button class="button button-primary form-action" type="submit">Salvar cupom</button>
+                    </form>
+
+                    <div class="site-product-list coupon-list" id="couponList"></div>
+                </section>
+            </section>
+
+            <section class="view" data-view="siteImages">
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Imagens do site</h2>
+                                <span class="panel-note">Banners, campanhas e vitrines</span>
+                            </div>
+                        </div>
+
+                        <form class="form-grid" id="siteImagesForm">
+                            <label class="form-span">
+                                Texto da faixa superior
+                                <input id="sitePromoTextInput" type="text" autocomplete="off" placeholder="Ex: frete grátis acima de R$ 399">
+                            </label>
+
+                            <label class="form-span">
+                                Imagem principal do banner
+                                <input id="bannerImageInput" type="text" autocomplete="off" placeholder="/uploads/banner.jpg ou https://...">
+                            </label>
+
+                            <label class="form-span">
+                                Foto principal do dispositivo
+                                <input id="bannerImageFile" type="file" accept="image/png,image/jpeg,image/webp">
+                            </label>
+
+                            <div class="image-preview form-span" id="bannerImagePreview">
+                                <span>Nenhum banner principal selecionado</span>
+                            </div>
+
+                            <label>
+                                Título da campanha
+                                <input id="campaignTitleInput" type="text" autocomplete="off" placeholder="Coleção premium pronta entrega">
+                            </label>
+
+                            <label>
+                                Botão da campanha
+                                <input id="campaignButtonInput" type="text" autocomplete="off" placeholder="Ver novidades">
+                            </label>
+
+                            <label class="form-span">
+                                Descrição da campanha
+                                <textarea id="campaignDescriptionInput" rows="3" placeholder="Texto curto para promoção, coleção ou lançamento"></textarea>
+                            </label>
+
+                            <label class="form-span">
+                                Imagem da campanha
+                                <input id="campaignImageInput" type="text" autocomplete="off" placeholder="/uploads/campanha.jpg ou https://...">
+                            </label>
+
+                            <label class="form-span">
+                                Foto da campanha do dispositivo
+                                <input id="campaignImageFile" type="file" accept="image/png,image/jpeg,image/webp">
+                            </label>
+
+                            <div class="image-preview form-span" id="campaignImagePreview">
+                                <span>Nenhuma campanha selecionada</span>
+                            </div>
+
+                            <div class="site-image-slots form-span">
+                                <label>
+                                    Título vitrine 1
+                                    <input id="lookbookTitle1Input" type="text" autocomplete="off" placeholder="Novidades">
+                                </label>
+                                <label>
+                                    Imagem vitrine 1
+                                    <input id="lookbookImage1Input" type="text" autocomplete="off" placeholder="/uploads/vitrine-1.jpg">
+                                </label>
+                                <label>
+                                    Upload vitrine 1
+                                    <input id="lookbookImage1File" type="file" accept="image/png,image/jpeg,image/webp">
+                                </label>
+                                <div class="image-preview" id="lookbookImage1Preview">
+                                    <span>Nenhuma imagem</span>
+                                </div>
+                            </div>
+
+                            <div class="site-image-slots form-span">
+                                <label>
+                                    Título vitrine 2
+                                    <input id="lookbookTitle2Input" type="text" autocomplete="off" placeholder="Promoções">
+                                </label>
+                                <label>
+                                    Imagem vitrine 2
+                                    <input id="lookbookImage2Input" type="text" autocomplete="off" placeholder="/uploads/vitrine-2.jpg">
+                                </label>
+                                <label>
+                                    Upload vitrine 2
+                                    <input id="lookbookImage2File" type="file" accept="image/png,image/jpeg,image/webp">
+                                </label>
+                                <div class="image-preview" id="lookbookImage2Preview">
+                                    <span>Nenhuma imagem</span>
+                                </div>
+                            </div>
+
+                            <div class="site-image-slots form-span">
+                                <label>
+                                    Título vitrine 3
+                                    <input id="lookbookTitle3Input" type="text" autocomplete="off" placeholder="Mais desejados">
+                                </label>
+                                <label>
+                                    Imagem vitrine 3
+                                    <input id="lookbookImage3Input" type="text" autocomplete="off" placeholder="/uploads/vitrine-3.jpg">
+                                </label>
+                                <label>
+                                    Upload vitrine 3
+                                    <input id="lookbookImage3File" type="file" accept="image/png,image/jpeg,image/webp">
+                                </label>
+                                <div class="image-preview" id="lookbookImage3Preview">
+                                    <span>Nenhuma imagem</span>
+                                </div>
+                            </div>
+
+                            <button class="button button-primary form-action" type="submit">Salvar imagens do site</button>
+                        </form>
+                    </section>
+
+                    <aside class="panel">
+                        <div class="panel-header">
+                            <h2>Como aparece</h2>
+                            <span class="panel-note">Prévia rápida</span>
+                        </div>
+                        <div class="site-image-admin-preview" id="siteImageAdminPreview"></div>
+                    </aside>
+                </div>
+            </section>
+
+            <section class="view" data-view="siteContact">
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Contato do site</h2>
+                                <span class="panel-note">WhatsApp, Instagram e endereço público</span>
+                            </div>
+                        </div>
+
+                        <form class="form-grid" id="siteContactForm">
+                            <label>
+                                WhatsApp da loja
+                                <input id="storeWhatsappInput" type="text" inputmode="tel" autocomplete="off" placeholder="Ex: 5511999999999 ou (11) 99999-9999">
+                            </label>
+
+                            <label>
+                                Instagram
+                                <input id="storeInstagramInput" type="text" autocomplete="off" placeholder="@nanamodas ou https://instagram.com/nanamodas">
+                            </label>
+
+                            <label class="form-span">
+                                Endereço da loja
+                                <textarea id="storeAddressInput" rows="4" placeholder="Rua, número, bairro, cidade - UF"></textarea>
+                            </label>
+
+                            <div class="config-note form-span">
+                                <strong>Onde aparece</strong>
+                                <span>Essas informações aparecem no rodapé e na faixa de contato da loja online. O WhatsApp abre conversa direta e o Instagram abre o perfil informado.</span>
+                            </div>
+
+                            <button class="button button-primary form-action" type="submit">Salvar contato do site</button>
+                        </form>
+                    </section>
+
+                    <aside class="panel">
+                        <div class="panel-header">
+                            <h2>Prévia do contato</h2>
+                            <span class="panel-note">Loja online</span>
+                        </div>
+                        <div class="contact-admin-preview" id="siteContactAdminPreview"></div>
+                    </aside>
+                </div>
+            </section>
+
+            <section class="view" data-view="pdv">
+                <div class="pdv-layout">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Produtos disponíveis</h2>
+                            <input class="search-input" id="pdvSearch" type="search" placeholder="Buscar para vender">
+                        </div>
+                        <div class="product-pick-grid" id="pdvProductGrid"></div>
+                    </section>
+
+                    <aside class="panel pdv-cart">
+                        <div class="panel-header">
+                            <h2>Carrinho</h2>
+                            <span class="panel-note" id="cartCount">0 itens</span>
+                        </div>
+
+                        <div class="cart-list" id="cartList"></div>
+
+                        <div class="payment-box">
+                            <span>Ajustes da venda</span>
+                            <div class="pdv-money-grid">
+                                <label>
+                                    Desconto
+                                    <input id="saleDiscount" type="number" min="0" step="0.01" placeholder="0,00">
+                                </label>
+                                <label>
+                                    Valor recebido
+                                    <input id="saleReceived" type="number" min="0" step="0.01" placeholder="0,00">
+                                </label>
+                            </div>
+                            <label>
+                                Observação
+                                <input id="saleNote" type="text" autocomplete="off" placeholder="Ex: retirada na loja">
+                            </label>
+                        </div>
+
+                        <div class="payment-box">
+                            <span>Pagamento</span>
+                            <div class="segmented" id="paymentOptions">
+                                <label><input type="radio" name="payment" value="Pix" checked> Pix</label>
+                                <label><input type="radio" name="payment" value="Dinheiro"> Dinheiro</label>
+                                <label><input type="radio" name="payment" value="CartaoDebito"> Débito</label>
+                                <label><input type="radio" name="payment" value="CartaoCredito"> Crédito</label>
+                            </div>
+                        </div>
+
+                        <div class="total-row">
+                            <span>Subtotal</span>
+                            <strong id="cartSubtotal">R$ 0,00</strong>
+                        </div>
+
+                        <div class="total-row">
+                            <span>Total</span>
+                            <strong id="cartTotal">R$ 0,00</strong>
+                        </div>
+
+                        <div class="total-row">
+                            <span>Troco</span>
+                            <strong id="saleChange">R$ 0,00</strong>
+                        </div>
+
+                        <button class="button button-primary button-full" id="finishSaleButton" type="button">Finalizar venda</button>
+                        <div class="receipt-box hidden" id="receiptBox"></div>
+                    </aside>
+                </div>
+            </section>
+
+            <section class="view" data-view="stock">
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Entrada de estoque</h2>
+                            <span class="panel-note">Reposição manual</span>
+                        </div>
+
+                        <form class="form-grid" id="stockForm">
+                            <label class="form-span">
+                                Produto
+                                <select id="stockProduct" required></select>
+                            </label>
+
+                            <label id="stockSizeWrap" class="hidden">
+                                Tamanho
+                                <select id="stockSize"></select>
+                            </label>
+
+                            <label id="stockColorWrap" class="hidden">
+                                Cor
+                                <select id="stockColor"></select>
+                            </label>
+
+                            <label id="stockModelWrap" class="hidden">
+                                Modelo
+                                <select id="stockModel"></select>
+                            </label>
+
+                            <label>
+                                Quantidade
+                                <input id="stockQuantity" type="number" min="1" step="1" required>
+                            </label>
+
+                            <label>
+                                Fornecedor
+                                <select id="stockSupplier"></select>
+                            </label>
+
+                            <label>
+                                Custo unitário
+                                <input id="stockCost" type="number" min="0" step="0.01" placeholder="0,00">
+                            </label>
+
+                            <label>
+                                Nota/documento
+                                <input id="stockDocument" type="text" autocomplete="off" placeholder="NF, pedido ou recibo">
+                            </label>
+
+                            <label>
+                                Observação
+                                <input id="stockNote" type="text" autocomplete="off">
+                            </label>
+
+                            <button class="button button-primary form-action" type="submit">Registrar entrada</button>
+                        </form>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Mapa rápido</h2>
+                            <span class="panel-note">Estoque atual</span>
+                        </div>
+                        <div class="stock-map" id="stockMap"></div>
+                    </section>
+                </div>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Fornecedores</h2>
+                            <span class="panel-note" id="supplierCount">0 cadastrados</span>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="supplierForm">
+                        <label>
+                            Nome
+                            <input id="supplierName" type="text" autocomplete="off" required>
+                        </label>
+
+                        <label>
+                            Documento
+                            <input id="supplierDocument" type="text" autocomplete="off" placeholder="CNPJ ou CPF">
+                        </label>
+
+                        <label>
+                            Telefone
+                            <input id="supplierPhone" type="tel" autocomplete="off">
+                        </label>
+
+                        <label>
+                            E-mail
+                            <input id="supplierEmail" type="email" autocomplete="off">
+                        </label>
+
+                        <button class="button button-secondary form-action" type="submit">Adicionar fornecedor</button>
+                    </form>
+
+                    <div class="compact-list supplier-list" id="supplierList"></div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Movimentações</h2>
+                        <span class="panel-note" id="movementCount">0 registros</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Produto</th>
+                                    <th>Tipo</th>
+                                    <th>Qtd.</th>
+                                    <th>Estoque após</th>
+                                    <th>Origem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="movementsTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <section class="view" data-view="onlineOrders">
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Fila de pedidos</h2>
+                                <span class="panel-note" id="onlineOrdersCount">0 pedidos</span>
+                            </div>
+                            <div class="toolbar">
+                                <input class="search-input" id="onlineOrderSearch" type="search" placeholder="Buscar cliente, e-mail ou pedido">
+                                <select class="search-input" id="onlineOrderStatusFilter" aria-label="Filtrar status do pedido">
+                                    <option value="all">Todos os status</option>
+                                    <option value="Recebido">Aguardando pagamento</option>
+                                    <option value="Pago">Pago</option>
+                                    <option value="Separando">Separando</option>
+                                    <option value="Enviado">Enviado</option>
+                                    <option value="Entregue">Entregue</option>
+                                    <option value="Cancelado">Cancelado</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="online-order-list" id="onlineOrderList"></div>
+                        <div class="receipt-box hidden" id="onlineReceiptBox"></div>
+                    </section>
+
+                    <aside class="panel">
+                        <div class="panel-header">
+                            <h2>Resumo da fila</h2>
+                            <span class="panel-note">Status online</span>
+                        </div>
+                        <div class="order-status-grid" id="onlineOrderStatusSummary"></div>
+                        <div class="order-ops-summary" id="onlineOrderOpsSummary"></div>
+                    </aside>
+                </div>
+            </section>
+
+            <section class="view" data-view="customers">
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Clientes da loja online</h2>
+                                <span class="panel-note" id="customerCount">0 clientes</span>
+                            </div>
+                            <input class="search-input" id="customerSearch" type="search" placeholder="Buscar nome, e-mail ou telefone">
+                        </div>
+
+                        <div class="customer-list" id="customerList"></div>
+                    </section>
+
+                    <aside class="panel">
+                        <div class="panel-header">
+                            <h2>Resumo dos clientes</h2>
+                            <span class="panel-note">Relacionamento</span>
+                        </div>
+                        <div class="payment-summary" id="customerSummary"></div>
+                    </aside>
+                </div>
+            </section>
+
+            <section class="view" data-view="reports">
+                <section class="report-kpi-strip" id="reportKpiStrip"></section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Filtros</h2>
+                            <span class="panel-note">Período, canal e pagamento</span>
+                        </div>
+                        <button class="button button-ghost" id="clearReportFilters" type="button">Limpar filtros</button>
+                    </div>
+
+                    <div class="report-filter-grid">
+                        <label>
+                            De
+                            <input id="reportStartDate" type="date">
+                        </label>
+                        <label>
+                            Até
+                            <input id="reportEndDate" type="date">
+                        </label>
+                        <label>
+                            Canal
+                            <select id="reportChannelFilter">
+                                <option value="all">Todos</option>
+                                <option value="pdv">PDV</option>
+                                <option value="online">Online</option>
+                            </select>
+                        </label>
+                        <label>
+                            Pagamento
+                            <select id="reportPaymentFilter">
+                                <option value="all">Todos</option>
+                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="Pix">Pix</option>
+                                <option value="CartaoDebito">Cartão débito</option>
+                                <option value="CartaoCredito">Cartão crédito</option>
+                            </select>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Exportações</h2>
+                            <span class="panel-note">Baixe dados para planilha</span>
+                        </div>
+                        <div class="toolbar report-export-actions" id="reportExportActions">
+                            <button class="button button-secondary" type="button" data-export-report="products">Produtos CSV</button>
+                            <button class="button button-secondary" type="button" data-export-report="sales">Vendas CSV</button>
+                            <button class="button button-secondary" type="button" data-export-report="orders">Pedidos CSV</button>
+                            <button class="button button-secondary" type="button" data-export-report="backup">Backup banco</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Backups salvos</h2>
+                            <span class="panel-note" id="backupFileCount">0 arquivos</span>
+                        </div>
+                        <button class="button button-ghost" id="refreshBackupsButton" type="button">Atualizar lista</button>
+                    </div>
+                    <div class="compact-list backup-file-list" id="backupFileList"></div>
+                </section>
+
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Resumo por pagamento</h2>
+                            <span class="panel-note">Vendas presenciais</span>
+                        </div>
+                        <div class="payment-summary" id="paymentSummary"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Indicadores</h2>
+                            <span class="panel-note">Operação atual</span>
+                        </div>
+                        <div class="report-stack" id="reportIndicators"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Mais vendidos</h2>
+                            <span class="panel-note">PDV + online</span>
+                        </div>
+                        <div class="payment-summary" id="topProductsReport"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Vendas por dia</h2>
+                            <span class="panel-note">Últimos movimentos</span>
+                        </div>
+                        <div class="payment-summary" id="dailySalesReport"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Entradas por fornecedor</h2>
+                            <span class="panel-note">Mercadorias</span>
+                        </div>
+                        <div class="payment-summary" id="supplierEntriesReport"></div>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Estoque crítico</h2>
+                            <span class="panel-note">3 unidades ou menos</span>
+                        </div>
+                        <div class="payment-summary" id="lowStockReport"></div>
+                    </section>
+                </div>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Pedidos online</h2>
+                        <span class="panel-note" id="ordersCount">0 pedidos</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Cliente</th>
+                                    <th>Status</th>
+                                    <th>Pagamento</th>
+                                    <th>Itens</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Vendas registradas</h2>
+                        <span class="panel-note" id="salesCount">0 vendas</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Pagamento</th>
+                                    <th>Itens</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <section class="view" data-view="users">
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Usuário do painel</h2>
+                                <span class="panel-note" id="userFormMode">Novo acesso</span>
+                            </div>
+                            <button class="button button-ghost hidden" id="cancelUserEditButton" type="button">Cancelar edição</button>
+                        </div>
+
+                        <form class="form-grid" id="panelUserForm">
+                            <input type="hidden" id="panelUserId">
+
+                            <label>
+                                Usuário
+                                <input id="panelUserLogin" type="text" autocomplete="off" placeholder="ex: caixa2" required>
+                            </label>
+
+                            <label>
+                                Nome no painel
+                                <input id="panelUserName" type="text" autocomplete="off" placeholder="Nome da pessoa" required>
+                            </label>
+
+                            <label>
+                                Perfil
+                                <select id="panelUserRole" required>
+                                    <option value="Admin">Administrador</option>
+                                    <option value="Caixa">Caixa</option>
+                                    <option value="Estoque">Estoque</option>
+                                </select>
+                            </label>
+
+                            <label>
+                                Senha
+                                <input id="panelUserPassword" type="password" autocomplete="new-password" minlength="6" placeholder="Mínimo 6 caracteres">
+                            </label>
+
+                            <label class="checkbox-line">
+                                <input id="panelUserActive" type="checkbox" checked>
+                                Usuário ativo
+                            </label>
+
+                            <button class="button button-primary form-action" type="submit">Salvar usuário</button>
+                        </form>
+                    </section>
+
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Acessos cadastrados</h2>
+                            <span class="panel-note" id="panelUserCount">0 usuários</span>
+                        </div>
+                        <div class="compact-list" id="panelUserList"></div>
+                    </section>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="return-modal hidden" id="returnModal" role="dialog" aria-modal="true" aria-labelledby="returnTitle">
+        <form class="return-modal-card" id="returnForm">
+            <div class="panel-header">
+                <div>
+                    <h2 id="returnTitle">Devolução PDV</h2>
+                    <span class="panel-note" id="returnSaleSummary">Selecione os itens</span>
+                </div>
+                <button class="button button-ghost" id="cancelReturnButton" type="button">Fechar</button>
+            </div>
+
+            <div class="return-items" id="returnItems"></div>
+
+            <div class="exchange-summary hidden" id="exchangeSummary"></div>
+
+            <label>
+                Motivo
+                <textarea id="returnReason" rows="3" placeholder="Ex: troca de tamanho"></textarea>
+            </label>
+
+            <button class="button button-danger button-full" type="submit">Registrar devolução</button>
+        </form>
+    </div>
+
+    <script src="/app.js?v=20260620-1" defer></script>
+</body>
+</html>

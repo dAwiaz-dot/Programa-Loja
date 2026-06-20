@@ -1,0 +1,7 @@
+**/bin/
+**/obj/
+**/.DS_Store
+**/Data/*.db
+**/Data/backups/
+**/wwwroot/uploads/
+.git/

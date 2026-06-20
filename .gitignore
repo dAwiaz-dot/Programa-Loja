@@ -1,0 +1,7 @@
+**/bin/
+**/obj/
+.DS_Store
+LojaSistema.Api/Data/*.db
+LojaSistema.Api/Data/backups/
+LojaSistema.Api/wwwroot/uploads/*
+!LojaSistema.Api/wwwroot/uploads/.gitkeep
