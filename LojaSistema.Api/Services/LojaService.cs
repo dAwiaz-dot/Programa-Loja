@@ -41,9 +41,12 @@ public sealed class LojaService
     private static readonly TimeSpan JanelaTentativasLoginPainel = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan BloqueioLoginPainel = TimeSpan.FromMinutes(15);
 
-    public LojaService(IWebHostEnvironment environment)
+    public LojaService(IWebHostEnvironment environment, IConfiguration configuration)
     {
-        var dataDirectory = Path.Combine(environment.ContentRootPath, "Data");
+        var storageRoot = configuration["NANA_STORAGE_ROOT"]?.Trim();
+        var dataDirectory = !string.IsNullOrWhiteSpace(storageRoot)
+            ? Path.Combine(storageRoot, "Data")
+            : Path.Combine(environment.ContentRootPath, "Data");
         Directory.CreateDirectory(dataDirectory);
         _databasePath = Path.Combine(dataDirectory, "nana-modas.db");
         _connectionString = new SqliteConnectionStringBuilder

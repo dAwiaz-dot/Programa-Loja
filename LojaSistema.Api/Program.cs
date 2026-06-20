@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.FileProviders;
 using LojaSistema.Api.Models;
 using LojaSistema.Api.Requests;
 using LojaSistema.Api.Services;
@@ -11,6 +12,11 @@ using LojaSistema.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 const string clienteScheme = "NanaCliente";
+var railwayPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(railwayPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
+}
 
 builder.Services.AddSingleton<LojaService>();
 builder.Services.AddHostedService<BackupAutomaticoService>();
@@ -116,7 +122,19 @@ app.Use(async (context, next) =>
     await next();
 });
 
+var uploadsDirectory = ObterPastaUploads(app.Environment, app.Configuration);
+Directory.CreateDirectory(uploadsDirectory);
+
 app.UseDefaultFiles();
+if (!string.IsNullOrWhiteSpace(ObterStorageRoot(app.Configuration)))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(uploadsDirectory),
+        RequestPath = "/uploads"
+    });
+}
+
 app.UseStaticFiles();
 
 app.MapGet("/health", () => Results.Ok(new
@@ -423,7 +441,7 @@ app.MapGet("/produtos/{id:guid}", (Guid id, LojaService loja) =>
     return produto is null ? Results.NotFound(new { erro = "Produto nao encontrado." }) : Results.Ok(produto);
 }).RequireAuthorization("CanReadProducts");
 
-app.MapPost("/produtos/imagem", async (HttpRequest request, IWebHostEnvironment environment) =>
+app.MapPost("/produtos/imagem", async (HttpRequest request, IWebHostEnvironment environment, IConfiguration configuration) =>
 {
     if (!request.HasFormContentType)
     {
@@ -450,8 +468,7 @@ app.MapPost("/produtos/imagem", async (HttpRequest request, IWebHostEnvironment 
         return Results.BadRequest(new { erro = "Envie uma imagem JPG, PNG ou WebP." });
     }
 
-    var webRoot = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
-    var pastaUploads = Path.Combine(webRoot, "uploads");
+    var pastaUploads = ObterPastaUploads(environment, configuration);
     Directory.CreateDirectory(pastaUploads);
 
     var nomeArquivo = $"{Guid.NewGuid():N}{extensao}";
@@ -831,6 +848,23 @@ static bool DocumentoValidoAsaas(string? documento)
 {
     var digitos = new string((documento ?? "").Where(char.IsDigit).ToArray());
     return digitos.Length is 11 or 14;
+}
+
+static string ObterPastaUploads(IWebHostEnvironment environment, IConfiguration configuration)
+{
+    var storageRoot = ObterStorageRoot(configuration);
+    if (!string.IsNullOrWhiteSpace(storageRoot))
+    {
+        return Path.Combine(storageRoot, "uploads");
+    }
+
+    var webRoot = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+    return Path.Combine(webRoot, "uploads");
+}
+
+static string? ObterStorageRoot(IConfiguration configuration)
+{
+    return configuration["NANA_STORAGE_ROOT"]?.Trim();
 }
 
 static string? ObterJsonString(JsonElement element, string propertyName)

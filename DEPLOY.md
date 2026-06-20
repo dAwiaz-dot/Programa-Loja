@@ -20,6 +20,37 @@ Para começar simples:
 
 Evite hospedagem apenas estática, porque o sistema precisa de backend, banco SQLite, uploads, login e PDV.
 
+## 2.1. Railway
+
+O Railway funciona bem para este projeto usando Docker. O proprio Railway informa que ASP.NET Core precisa de `Dockerfile`, e este projeto ja tem um `Dockerfile` na raiz.
+
+Passo a passo:
+
+1. Entre em `https://railway.com`.
+2. Crie um novo projeto.
+3. Escolha `Deploy from GitHub repo`.
+4. Selecione `dAwiaz-dot/Programa-Loja`.
+5. Confirme o deploy. O Railway deve detectar o `Dockerfile` automaticamente.
+6. Depois do primeiro deploy, abra o servico, va em `Settings > Networking` e clique em `Generate Domain`.
+7. Acesse `https://SEU-DOMINIO/health` para confirmar que o backend respondeu.
+
+Variaveis recomendadas no Railway:
+
+```text
+ASPNETCORE_ENVIRONMENT=Production
+NANA_STORAGE_ROOT=/data
+```
+
+Volume persistente:
+
+1. Crie um volume no Railway.
+2. Conecte o volume ao servico da loja.
+3. Configure o mount path como `/data`.
+
+Com isso, o banco fica em `/data/Data/nana-modas.db` e as imagens enviadas pelo painel ficam em `/data/uploads`.
+
+Sem esse volume, produtos, pedidos, clientes e fotos cadastradas em producao podem ser perdidos em novos deploys ou reinicios.
+
 ## 3. Domínio
 
 Você pode separar domínio/subdomínio:
