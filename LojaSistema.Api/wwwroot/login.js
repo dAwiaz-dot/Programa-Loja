@@ -28,7 +28,7 @@ form.addEventListener("submit", async (event) => {
             return;
         }
 
-        window.location.href = "/";
+        window.location.href = "/admin";
     } catch {
         error.textContent = "Não foi possível entrar agora.";
     } finally {

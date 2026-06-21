@@ -113,9 +113,9 @@ app.UseAuthorization();
 
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path == "/")
+    if (context.Request.Path == "/" && (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method)))
     {
-        context.Response.Redirect("/loja.html");
+        await ServirLojaInicial(context, app.Environment);
         return;
     }
 
@@ -150,10 +150,10 @@ app.MapGet("/health", () => Results.Ok(new
     data = DateTime.UtcNow
 }));
 
-app.MapGet("/loja", () => Results.Redirect("/loja.html"));
-app.MapGet("/admin", () => Results.Redirect("/index.html"));
-app.MapGet("/painel", () => Results.Redirect("/index.html"));
-app.MapGet("/pdv", () => Results.Redirect("/index.html"));
+app.MapGet("/loja", () => Results.Redirect("/"));
+app.MapGet("/admin", RedirecionarPainel);
+app.MapGet("/painel", RedirecionarPainel);
+app.MapGet("/pdv", RedirecionarPainel);
 
 app.MapPost("/auth/login", async (LoginRequest request, LojaService loja, HttpContext context) =>
 {
@@ -808,6 +808,25 @@ static bool IsAdminStaticAsset(PathString path)
     return path == "/index.html" ||
         path == "/app.js" ||
         path == "/styles.css";
+}
+
+static async Task ServirLojaInicial(HttpContext context, IWebHostEnvironment environment)
+{
+    context.Response.ContentType = "text/html; charset=utf-8";
+    if (HttpMethods.IsHead(context.Request.Method))
+    {
+        return;
+    }
+
+    var webRoot = environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot");
+    await context.Response.SendFileAsync(Path.Combine(webRoot, "loja.html"));
+}
+
+static IResult RedirecionarPainel(HttpContext context)
+{
+    return context.User.Identity?.IsAuthenticated == true
+        ? Results.Redirect("/index.html")
+        : Results.Redirect("/login.html");
 }
 
 static bool IsApiRequest(HttpRequest request)
