@@ -113,6 +113,12 @@ app.UseAuthorization();
 
 app.Use(async (context, next) =>
 {
+    if (context.Request.Path == "/")
+    {
+        context.Response.Redirect("/loja.html");
+        return;
+    }
+
     if (IsAdminStaticAsset(context.Request.Path) && context.User.Identity?.IsAuthenticated != true)
     {
         context.Response.Redirect("/login.html");
@@ -145,6 +151,9 @@ app.MapGet("/health", () => Results.Ok(new
 }));
 
 app.MapGet("/loja", () => Results.Redirect("/loja.html"));
+app.MapGet("/admin", () => Results.Redirect("/index.html"));
+app.MapGet("/painel", () => Results.Redirect("/index.html"));
+app.MapGet("/pdv", () => Results.Redirect("/index.html"));
 
 app.MapPost("/auth/login", async (LoginRequest request, LojaService loja, HttpContext context) =>
 {
@@ -796,8 +805,7 @@ app.Run();
 
 static bool IsAdminStaticAsset(PathString path)
 {
-    return path == "/" ||
-        path == "/index.html" ||
+    return path == "/index.html" ||
         path == "/app.js" ||
         path == "/styles.css";
 }
