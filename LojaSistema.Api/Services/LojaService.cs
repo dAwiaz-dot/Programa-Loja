@@ -22,7 +22,6 @@ public sealed class LojaService
     private readonly Dictionary<Guid, Fornecedor> _fornecedores = [];
     private readonly Dictionary<Guid, CupomDesconto> _cupons = [];
     private readonly Dictionary<Guid, OpcaoEntrega> _opcoesEntrega = [];
-    private readonly Dictionary<string, TentativaLoginPainel> _tentativasLoginPainel = [];
     private readonly List<VendaLoja> _vendasLoja = [];
     private readonly List<PedidoOnline> _pedidosOnline = [];
     private readonly List<EstoqueMovimentacao> _movimentacoes = [];
@@ -37,9 +36,6 @@ public sealed class LojaService
     private const int SenhaIteracoes = 100_000;
     private const int SenhaSaltBytes = 16;
     private const int SenhaHashBytes = 32;
-    private const int MaxTentativasLoginPainel = 5;
-    private static readonly TimeSpan JanelaTentativasLoginPainel = TimeSpan.FromMinutes(10);
-    private static readonly TimeSpan BloqueioLoginPainel = TimeSpan.FromMinutes(15);
 
     public LojaService(IWebHostEnvironment environment, IConfiguration configuration)
     {
@@ -110,21 +106,14 @@ public sealed class LojaService
 
         lock (_sync)
         {
-            if (LoginPainelBloqueado(usuario, out var erroBloqueio))
-            {
-                return Resultado<UsuarioPainelResponse>.Falha(erroBloqueio);
-            }
-
             var usuarioPainel = _usuariosPainel.Values
                 .FirstOrDefault(item => string.Equals(item.Usuario, usuario, StringComparison.OrdinalIgnoreCase));
 
             if (usuarioPainel is null || !usuarioPainel.Ativo || !VerificarSenha(senha, usuarioPainel.SenhaHash))
             {
-                RegistrarFalhaLoginPainel(usuario);
                 return Resultado<UsuarioPainelResponse>.Falha("Usuario ou senha incorretos.");
             }
 
-            _tentativasLoginPainel.Remove(usuario);
             return Resultado<UsuarioPainelResponse>.Ok(CriarUsuarioPainelResponse(usuarioPainel));
         }
     }
@@ -3614,50 +3603,6 @@ public sealed class LojaService
         }
     }
 
-    private bool LoginPainelBloqueado(string usuario, out string erro)
-    {
-        erro = "";
-        if (!_tentativasLoginPainel.TryGetValue(usuario, out var tentativa))
-        {
-            return false;
-        }
-
-        var agora = DateTime.UtcNow;
-        if (tentativa.BloqueadoAte is not null && tentativa.BloqueadoAte > agora)
-        {
-            var minutos = Math.Max(1, (int)Math.Ceiling((tentativa.BloqueadoAte.Value - agora).TotalMinutes));
-            erro = $"Muitas tentativas incorretas. Tente novamente em {minutos} min.";
-            return true;
-        }
-
-        if (tentativa.BloqueadoAte is not null || agora - tentativa.PrimeiraFalha > JanelaTentativasLoginPainel)
-        {
-            _tentativasLoginPainel.Remove(usuario);
-        }
-
-        return false;
-    }
-
-    private void RegistrarFalhaLoginPainel(string usuario)
-    {
-        var agora = DateTime.UtcNow;
-        if (!_tentativasLoginPainel.TryGetValue(usuario, out var tentativa) ||
-            agora - tentativa.PrimeiraFalha > JanelaTentativasLoginPainel)
-        {
-            tentativa = new TentativaLoginPainel
-            {
-                PrimeiraFalha = agora
-            };
-            _tentativasLoginPainel[usuario] = tentativa;
-        }
-
-        tentativa.Falhas += 1;
-        if (tentativa.Falhas >= MaxTentativasLoginPainel)
-        {
-            tentativa.BloqueadoAte = agora.Add(BloqueioLoginPainel);
-        }
-    }
-
     private string? ValidarProduto(string nome, Guid categoriaId, decimal preco, decimal custo, int quantidadeInicial)
     {
         if (string.IsNullOrWhiteSpace(nome))
@@ -4988,10 +4933,4 @@ public sealed class LojaService
             NormalizarComparacao(variacao.Modelo));
     }
 
-    private sealed class TentativaLoginPainel
-    {
-        public int Falhas { get; set; }
-        public DateTime PrimeiraFalha { get; init; }
-        public DateTime? BloqueadoAte { get; set; }
-    }
 }
