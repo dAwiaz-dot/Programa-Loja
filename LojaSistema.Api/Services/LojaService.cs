@@ -37,6 +37,7 @@ public sealed class LojaService
     private const int SenhaSaltBytes = 16;
     private const int SenhaHashBytes = 32;
     private const string MigracaoZerarEstoqueEntrega = "2026-07-06-zerar-estoque-entrega";
+    private const string MigracaoRenomearEntregaLocal = "2026-07-06-renomear-entrega-local";
 
     public LojaService(IWebHostEnvironment environment, IConfiguration configuration)
     {
@@ -93,6 +94,8 @@ public sealed class LojaService
 
         var estoqueZeradoParaEntrega = ZerarEstoqueParaEntregaSePendente();
         precisaSalvar |= estoqueZeradoParaEntrega;
+        var entregaLocalRenomeada = RenomearEntregaLocalSePendente();
+        precisaSalvar |= entregaLocalRenomeada;
 
         if (precisaSalvar)
         {
@@ -102,6 +105,11 @@ public sealed class LojaService
         if (estoqueZeradoParaEntrega)
         {
             RegistrarMigracaoAplicada(MigracaoZerarEstoqueEntrega);
+        }
+
+        if (entregaLocalRenomeada)
+        {
+            RegistrarMigracaoAplicada(MigracaoRenomearEntregaLocal);
         }
     }
 
@@ -2582,15 +2590,7 @@ public sealed class LojaService
 
     private bool ZerarEstoqueParaEntregaSePendente()
     {
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-        using var command = CreateCommand(
-            connection,
-            null,
-            "SELECT COUNT(1) FROM SistemaMigracoes WHERE Chave = $Chave;");
-        Add(command, "$Chave", MigracaoZerarEstoqueEntrega);
-
-        if (Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) > 0)
+        if (MigracaoAplicada(MigracaoZerarEstoqueEntrega))
         {
             return false;
         }
@@ -2631,6 +2631,51 @@ public sealed class LojaService
         });
 
         return true;
+    }
+
+    private bool RenomearEntregaLocalSePendente()
+    {
+        if (MigracaoAplicada(MigracaoRenomearEntregaLocal))
+        {
+            return false;
+        }
+
+        var opcoesAlteradas = _opcoesEntrega.Values
+            .Where(opcao =>
+                string.Equals(opcao.Tipo, "EntregaLocal", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(opcao.Nome, "Davi Silva Dias", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var opcao in opcoesAlteradas)
+        {
+            opcao.Nome = "Entrega local Nana Modas";
+            opcao.Descricao = "Entrega combinada pela Nana Modas em Alfenas e regiões atendidas.";
+            opcao.AtualizadoEm = DateTime.UtcNow;
+        }
+
+        if (opcoesAlteradas.Count > 0)
+        {
+            _atividadesPainel.Add(new AtividadePainel
+            {
+                Usuario = "sistema",
+                Acao = "Entrega local atualizada",
+                Detalhe = "A opção de entrega foi renomeada para Entrega local Nana Modas."
+            });
+        }
+
+        return true;
+    }
+
+    private bool MigracaoAplicada(string chave)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = CreateCommand(
+            connection,
+            null,
+            "SELECT COUNT(1) FROM SistemaMigracoes WHERE Chave = $Chave;");
+        Add(command, "$Chave", chave);
+        return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) > 0;
     }
 
     private void RegistrarMigracaoAplicada(string chave)
