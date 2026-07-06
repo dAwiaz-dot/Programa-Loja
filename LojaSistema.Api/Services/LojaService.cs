@@ -36,6 +36,7 @@ public sealed class LojaService
     private const int SenhaIteracoes = 100_000;
     private const int SenhaSaltBytes = 16;
     private const int SenhaHashBytes = 32;
+    private const int SmtpTimeoutMs = 45_000;
     private const string MigracaoZerarEstoqueEntrega = "2026-07-06-zerar-estoque-entrega";
     private const string MigracaoRenomearEntregaLocal = "2026-07-06-renomear-entrega-local";
 
@@ -860,6 +861,15 @@ public sealed class LojaService
             var gatewayPagamentoAtivo = request.GatewayPagamentoAtivo ?? false;
             var gatewayPagamentoAccessToken = NormalizarTextoOpcional(request.GatewayPagamentoAccessToken) ?? _configuracaoLoja.GatewayPagamentoAccessToken;
             var gatewayPagamentoWebhookSecret = NormalizarTextoOpcional(request.GatewayPagamentoWebhookSecret) ?? _configuracaoLoja.GatewayPagamentoWebhookSecret;
+            var smtpUsuario = NormalizarTextoOpcional(request.SmtpUsuario) ?? "";
+            var smtpSenha = NormalizarTextoOpcional(request.SmtpSenha) ?? _configuracaoLoja.SmtpSenha;
+
+            if (emailNotificacoesAtivo &&
+                !string.IsNullOrWhiteSpace(smtpUsuario) &&
+                string.IsNullOrWhiteSpace(smtpSenha))
+            {
+                return Resultado<LojaConfiguracaoResponse>.Falha("Informe a senha SMTP. No Gmail use a senha de app, nao a senha normal da conta.");
+            }
 
             if (gatewayPagamentoAtivo)
             {
@@ -921,8 +931,8 @@ public sealed class LojaService
             _configuracaoLoja.EmailPedidosDestino = emailPedidosDestino ?? "";
             _configuracaoLoja.SmtpHost = smtpHost;
             _configuracaoLoja.SmtpPorta = smtpPorta;
-            _configuracaoLoja.SmtpUsuario = NormalizarTextoOpcional(request.SmtpUsuario) ?? "";
-            _configuracaoLoja.SmtpSenha = NormalizarTextoOpcional(request.SmtpSenha) ?? _configuracaoLoja.SmtpSenha;
+            _configuracaoLoja.SmtpUsuario = smtpUsuario;
+            _configuracaoLoja.SmtpSenha = smtpSenha;
             _configuracaoLoja.SmtpSsl = request.SmtpSsl ?? true;
             _configuracaoLoja.BackupAutomaticoAtivo = request.BackupAutomaticoAtivo ?? true;
             _configuracaoLoja.BackupIntervaloHoras = backupIntervaloHoras;
@@ -2175,6 +2185,12 @@ public sealed class LojaService
                 return Resultado<string>.Falha("Configure remetente e servidor SMTP antes de testar.");
             }
 
+            if (!string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpUsuario) &&
+                string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpSenha))
+            {
+                return Resultado<string>.Falha("Informe a senha SMTP. No Gmail use a senha de app, nao a senha normal da conta.");
+            }
+
             try
             {
                 using var mensagem = new MailMessage
@@ -2186,25 +2202,55 @@ public sealed class LojaService
                 };
                 mensagem.To.Add(destino);
 
-                using var smtp = new SmtpClient(_configuracaoLoja.SmtpHost, _configuracaoLoja.SmtpPorta)
-                {
-                    EnableSsl = _configuracaoLoja.SmtpSsl,
-                    Timeout = 12000
-                };
-
-                if (!string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpUsuario))
-                {
-                    smtp.Credentials = new NetworkCredential(_configuracaoLoja.SmtpUsuario, _configuracaoLoja.SmtpSenha);
-                }
-
+                using var smtp = CriarClienteSmtp();
                 smtp.Send(mensagem);
                 return Resultado<string>.Ok($"E-mail de teste enviado para {destino}.");
             }
             catch (Exception ex)
             {
-                return Resultado<string>.Falha($"Nao foi possivel enviar o e-mail: {ex.Message}");
+                return Resultado<string>.Falha(CriarMensagemErroEmail(ex));
             }
         }
+    }
+
+    private SmtpClient CriarClienteSmtp()
+    {
+        var smtp = new SmtpClient(_configuracaoLoja.SmtpHost, _configuracaoLoja.SmtpPorta)
+        {
+            DeliveryMethod = SmtpDeliveryMethod.Network,
+            EnableSsl = _configuracaoLoja.SmtpSsl,
+            Timeout = SmtpTimeoutMs,
+            UseDefaultCredentials = false
+        };
+
+        if (!string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpUsuario))
+        {
+            smtp.Credentials = new NetworkCredential(_configuracaoLoja.SmtpUsuario, _configuracaoLoja.SmtpSenha);
+        }
+
+        return smtp;
+    }
+
+    private static string CriarMensagemErroEmail(Exception ex)
+    {
+        var mensagem = ex.Message;
+        var detalhe = ex.InnerException?.Message;
+        var textoCompleto = $"{mensagem} {detalhe}";
+
+        if (textoCompleto.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
+            textoCompleto.Contains("timeout", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Nao foi possivel conectar ao Gmail dentro do tempo limite. Confira a senha de app do Gmail; se continuar, a hospedagem pode estar bloqueando SMTP e a melhor saida e usar um servico de e-mail por API, como Brevo, Resend ou SendGrid.";
+        }
+
+        if (textoCompleto.Contains("authentication", StringComparison.OrdinalIgnoreCase) ||
+            textoCompleto.Contains("auth", StringComparison.OrdinalIgnoreCase) ||
+            textoCompleto.Contains("5.7", StringComparison.OrdinalIgnoreCase))
+        {
+            return "O Gmail recusou o login. Use uma senha de app do Google no campo Senha SMTP, nao a senha normal do Gmail.";
+        }
+
+        return $"Nao foi possivel enviar o e-mail: {mensagem}";
     }
 
     private void InicializarBanco()
@@ -4499,17 +4545,7 @@ public sealed class LojaService
                 mensagem.ReplyToList.Add(pedido.EmailCliente);
             }
 
-            using var smtp = new SmtpClient(_configuracaoLoja.SmtpHost, _configuracaoLoja.SmtpPorta)
-            {
-                EnableSsl = _configuracaoLoja.SmtpSsl,
-                Timeout = 8000
-            };
-
-            if (!string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpUsuario))
-            {
-                smtp.Credentials = new NetworkCredential(_configuracaoLoja.SmtpUsuario, _configuracaoLoja.SmtpSenha);
-            }
-
+            using var smtp = CriarClienteSmtp();
             smtp.Send(mensagem);
         }
         catch
@@ -4522,7 +4558,9 @@ public sealed class LojaService
     {
         return _configuracaoLoja.EmailNotificacoesAtivo &&
             !string.IsNullOrWhiteSpace(_configuracaoLoja.EmailRemetente) &&
-            !string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpHost);
+            !string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpHost) &&
+            (string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpUsuario) ||
+             !string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpSenha));
     }
 
     private void TentarEnviarEmailSimples(string destino, string assunto, string corpo)
@@ -4543,17 +4581,7 @@ public sealed class LojaService
             };
             mensagem.To.Add(destino);
 
-            using var smtp = new SmtpClient(_configuracaoLoja.SmtpHost, _configuracaoLoja.SmtpPorta)
-            {
-                EnableSsl = _configuracaoLoja.SmtpSsl,
-                Timeout = 8000
-            };
-
-            if (!string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpUsuario))
-            {
-                smtp.Credentials = new NetworkCredential(_configuracaoLoja.SmtpUsuario, _configuracaoLoja.SmtpSenha);
-            }
-
+            using var smtp = CriarClienteSmtp();
             smtp.Send(mensagem);
         }
         catch

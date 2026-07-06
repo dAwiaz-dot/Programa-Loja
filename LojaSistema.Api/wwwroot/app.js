@@ -2769,6 +2769,15 @@ function buildSiteConfigPayload() {
 async function testEmailConfig() {
     try {
         els.testEmailButton.disabled = true;
+        els.emailNotificationsActiveInput.checked = true;
+        els.testEmailButton.textContent = "Salvando e testando...";
+
+        state.siteConfig = await api("/loja-configuracao", {
+            method: "PUT",
+            body: JSON.stringify(buildSiteConfigPayload())
+        });
+        renderSiteConfig();
+
         const response = await api("/loja-configuracao/testar-email", {
             method: "POST",
             body: JSON.stringify({
@@ -2781,6 +2790,7 @@ async function testEmailConfig() {
         showToast(error.message || "Não foi possível testar o e-mail.");
     } finally {
         els.testEmailButton.disabled = false;
+        els.testEmailButton.textContent = "Testar e-mail";
     }
 }
 
