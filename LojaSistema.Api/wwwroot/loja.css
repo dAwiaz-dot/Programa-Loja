@@ -58,14 +58,21 @@ a:focus-visible {
 
 .promo-bar {
     display: grid;
-    min-height: 44px;
+    min-height: 48px;
     place-items: center;
-    background: #000;
-    color: var(--ivory);
-    padding: 9px 18px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    background: linear-gradient(90deg, #d7b46a 0%, #f3d98f 50%, #d7b46a 100%);
+    color: #050505;
+    padding: 10px 20px;
     text-align: center;
-    font-size: 13px;
-    font-weight: 800;
+    font-family: Arial, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.promo-bar span {
+    max-width: min(100%, 1120px);
 }
 
 .store-header {
@@ -2321,7 +2328,9 @@ legend {
 
 @media (max-width: 720px) {
     .promo-bar {
-        font-size: 12px;
+        min-height: 46px;
+        padding: 10px 14px;
+        font-size: 13px;
     }
 
     .header-main {
