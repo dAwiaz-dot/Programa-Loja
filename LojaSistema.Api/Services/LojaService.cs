@@ -36,6 +36,7 @@ public sealed class LojaService
     private const int SenhaIteracoes = 100_000;
     private const int SenhaSaltBytes = 16;
     private const int SenhaHashBytes = 32;
+    private const string MigracaoZerarEstoqueEntrega = "2026-07-06-zerar-estoque-entrega";
 
     public LojaService(IWebHostEnvironment environment, IConfiguration configuration)
     {
@@ -90,9 +91,17 @@ public sealed class LojaService
             precisaSalvar = true;
         }
 
+        var estoqueZeradoParaEntrega = ZerarEstoqueParaEntregaSePendente();
+        precisaSalvar |= estoqueZeradoParaEntrega;
+
         if (precisaSalvar)
         {
             SalvarTudo();
+        }
+
+        if (estoqueZeradoParaEntrega)
+        {
+            RegistrarMigracaoAplicada(MigracaoZerarEstoqueEntrega);
         }
     }
 
@@ -2196,6 +2205,13 @@ public sealed class LojaService
         connection.Open();
 
         ExecuteNonQuery(connection, null, """
+            CREATE TABLE IF NOT EXISTS SistemaMigracoes (
+                Chave TEXT PRIMARY KEY,
+                AplicadaEm TEXT NOT NULL
+            );
+            """);
+
+        ExecuteNonQuery(connection, null, """
             CREATE TABLE IF NOT EXISTS Categorias (
                 Id TEXT PRIMARY KEY,
                 Nome TEXT NOT NULL,
@@ -2562,6 +2578,75 @@ public sealed class LojaService
                 AtualizadoEm TEXT NOT NULL
             );
             """);
+    }
+
+    private bool ZerarEstoqueParaEntregaSePendente()
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = CreateCommand(
+            connection,
+            null,
+            "SELECT COUNT(1) FROM SistemaMigracoes WHERE Chave = $Chave;");
+        Add(command, "$Chave", MigracaoZerarEstoqueEntrega);
+
+        if (Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) > 0)
+        {
+            return false;
+        }
+
+        var produtosAlterados = 0;
+        var unidadesRemovidas = 0;
+        foreach (var produto in _produtos.Values)
+        {
+            var estoqueVariacoes = produto.VariacoesEstoque.Sum(variacao => variacao.Quantidade);
+            var estoqueAnterior = Math.Max(produto.QuantidadeEmEstoque, estoqueVariacoes);
+            if (estoqueAnterior <= 0)
+            {
+                continue;
+            }
+
+            foreach (var variacao in produto.VariacoesEstoque)
+            {
+                variacao.Quantidade = 0;
+            }
+
+            produto.QuantidadeEmEstoque = 0;
+            produto.AtualizadoEm = DateTime.UtcNow;
+            produtosAlterados += 1;
+            unidadesRemovidas += estoqueAnterior;
+            RegistrarMovimentacao(
+                produto,
+                TipoMovimentacaoEstoque.Ajuste,
+                estoqueAnterior,
+                "Zeragem de estoque para entrega do sistema",
+                null);
+        }
+
+        _atividadesPainel.Add(new AtividadePainel
+        {
+            Usuario = "sistema",
+            Acao = "Estoque zerado para entrega",
+            Detalhe = $"{produtosAlterados} produto(s) e {unidadesRemovidas} unidade(s) ajustados para zero."
+        });
+
+        return true;
+    }
+
+    private void RegistrarMigracaoAplicada(string chave)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = CreateCommand(
+            connection,
+            null,
+            """
+            INSERT OR IGNORE INTO SistemaMigracoes (Chave, AplicadaEm)
+            VALUES ($Chave, $AplicadaEm);
+            """);
+        Add(command, "$Chave", chave);
+        Add(command, "$AplicadaEm", DateTime.UtcNow);
+        command.ExecuteNonQuery();
     }
 
     private void CarregarDados()
