@@ -37,6 +37,10 @@ public sealed class LojaService
     private const int SenhaSaltBytes = 16;
     private const int SenhaHashBytes = 32;
     private const int SmtpTimeoutMs = 45_000;
+    private static readonly HttpClient EmailHttpClient = new()
+    {
+        Timeout = TimeSpan.FromMilliseconds(SmtpTimeoutMs)
+    };
     private const string MigracaoZerarEstoqueEntrega = "2026-07-06-zerar-estoque-entrega";
     private const string MigracaoRenomearEntregaLocal = "2026-07-06-renomear-entrega-local";
 
@@ -826,6 +830,7 @@ public sealed class LojaService
         }
 
         var emailNotificacoesAtivo = request.EmailNotificacoesAtivo ?? false;
+        var emailProvedor = NormalizarProvedorEmail(request.EmailProvedor);
         var emailRemetente = NormalizarEmailOpcional(request.EmailRemetente);
         var emailPedidosDestino = NormalizarEmailOpcional(request.EmailPedidosDestino);
         var smtpHost = NormalizarTextoOpcional(request.SmtpHost) ?? "";
@@ -849,10 +854,9 @@ public sealed class LojaService
 
         if (emailNotificacoesAtivo &&
             (string.IsNullOrWhiteSpace(emailRemetente) ||
-             string.IsNullOrWhiteSpace(emailPedidosDestino) ||
-             string.IsNullOrWhiteSpace(smtpHost)))
+             string.IsNullOrWhiteSpace(emailPedidosDestino)))
         {
-            return Resultado<LojaConfiguracaoResponse>.Falha("Para ativar e-mails, informe remetente, destino e servidor SMTP.");
+            return Resultado<LojaConfiguracaoResponse>.Falha("Para ativar e-mails, informe remetente e e-mail dos pedidos.");
         }
 
         lock (_sync)
@@ -861,10 +865,22 @@ public sealed class LojaService
             var gatewayPagamentoAtivo = request.GatewayPagamentoAtivo ?? false;
             var gatewayPagamentoAccessToken = NormalizarTextoOpcional(request.GatewayPagamentoAccessToken) ?? _configuracaoLoja.GatewayPagamentoAccessToken;
             var gatewayPagamentoWebhookSecret = NormalizarTextoOpcional(request.GatewayPagamentoWebhookSecret) ?? _configuracaoLoja.GatewayPagamentoWebhookSecret;
+            var brevoApiKey = NormalizarTextoOpcional(request.BrevoApiKey) ?? _configuracaoLoja.BrevoApiKey;
             var smtpUsuario = NormalizarTextoOpcional(request.SmtpUsuario) ?? "";
             var smtpSenha = NormalizarTextoOpcional(request.SmtpSenha) ?? _configuracaoLoja.SmtpSenha;
 
+            if (emailNotificacoesAtivo && emailProvedor == "Brevo" && string.IsNullOrWhiteSpace(brevoApiKey))
+            {
+                return Resultado<LojaConfiguracaoResponse>.Falha("Informe a API key da Brevo para ativar e-mails por Brevo.");
+            }
+
+            if (emailNotificacoesAtivo && emailProvedor == "Smtp" && string.IsNullOrWhiteSpace(smtpHost))
+            {
+                return Resultado<LojaConfiguracaoResponse>.Falha("Informe o servidor SMTP para ativar e-mails por SMTP.");
+            }
+
             if (emailNotificacoesAtivo &&
+                emailProvedor == "Smtp" &&
                 !string.IsNullOrWhiteSpace(smtpUsuario) &&
                 string.IsNullOrWhiteSpace(smtpSenha))
             {
@@ -927,8 +943,10 @@ public sealed class LojaService
             _configuracaoLoja.MensagemPagamento = NormalizarTextoOpcional(request.MensagemPagamento) ?? "";
             _configuracaoLoja.MensagemPagamentoCartao = NormalizarTextoOpcional(request.MensagemPagamentoCartao) ?? "";
             _configuracaoLoja.EmailNotificacoesAtivo = emailNotificacoesAtivo;
+            _configuracaoLoja.EmailProvedor = emailProvedor;
             _configuracaoLoja.EmailRemetente = emailRemetente ?? "";
             _configuracaoLoja.EmailPedidosDestino = emailPedidosDestino ?? "";
+            _configuracaoLoja.BrevoApiKey = brevoApiKey;
             _configuracaoLoja.SmtpHost = smtpHost;
             _configuracaoLoja.SmtpPorta = smtpPorta;
             _configuracaoLoja.SmtpUsuario = smtpUsuario;
@@ -2179,31 +2197,18 @@ public sealed class LojaService
                 return Resultado<string>.Falha("Informe um e-mail de destino valido.");
             }
 
-            if (string.IsNullOrWhiteSpace(_configuracaoLoja.EmailRemetente) ||
-                string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpHost))
+            var erroConfiguracao = ValidarConfiguracaoEmail();
+            if (erroConfiguracao is not null)
             {
-                return Resultado<string>.Falha("Configure remetente e servidor SMTP antes de testar.");
-            }
-
-            if (!string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpUsuario) &&
-                string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpSenha))
-            {
-                return Resultado<string>.Falha("Informe a senha SMTP. No Gmail use a senha de app, nao a senha normal da conta.");
+                return Resultado<string>.Falha(erroConfiguracao);
             }
 
             try
             {
-                using var mensagem = new MailMessage
-                {
-                    From = new MailAddress(_configuracaoLoja.EmailRemetente),
-                    Subject = "Teste de e-mail - Nana Modas",
-                    Body = $"Teste enviado pelo painel Nana Modas em {DateTime.Now:dd/MM/yyyy HH:mm}.",
-                    IsBodyHtml = false
-                };
-                mensagem.To.Add(destino);
-
-                using var smtp = CriarClienteSmtp();
-                smtp.Send(mensagem);
+                EnviarEmail(
+                    [destino],
+                    "Teste de e-mail - Nana Modas",
+                    $"Teste enviado pelo painel Nana Modas em {DateTime.Now:dd/MM/yyyy HH:mm}.");
                 return Resultado<string>.Ok($"E-mail de teste enviado para {destino}.");
             }
             catch (Exception ex)
@@ -2231,6 +2236,111 @@ public sealed class LojaService
         return smtp;
     }
 
+    private void EnviarEmail(IEnumerable<string> destinos, string assunto, string corpo, string? responderPara = null)
+    {
+        var destinatarios = destinos
+            .Select(NormalizarEmailOpcional)
+            .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (destinatarios.Count == 0)
+        {
+            return;
+        }
+
+        if (_configuracaoLoja.EmailProvedor == "Brevo")
+        {
+            EnviarEmailBrevo(destinatarios, assunto, corpo, responderPara);
+            return;
+        }
+
+        using var mensagem = new MailMessage
+        {
+            From = new MailAddress(_configuracaoLoja.EmailRemetente),
+            Subject = assunto,
+            Body = corpo,
+            IsBodyHtml = false
+        };
+
+        foreach (var destino in destinatarios)
+        {
+            mensagem.To.Add(destino);
+        }
+
+        var replyTo = NormalizarEmailOpcional(responderPara);
+        if (replyTo is not null)
+        {
+            mensagem.ReplyToList.Add(replyTo);
+        }
+
+        using var smtp = CriarClienteSmtp();
+        smtp.Send(mensagem);
+    }
+
+    private void EnviarEmailBrevo(IReadOnlyCollection<string> destinos, string assunto, string corpo, string? responderPara)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["sender"] = new
+            {
+                email = _configuracaoLoja.EmailRemetente,
+                name = "Nana Modas"
+            },
+            ["to"] = destinos.Select(email => new { email }).ToList(),
+            ["subject"] = assunto,
+            ["htmlContent"] = CriarHtmlEmail(corpo),
+            ["textContent"] = corpo
+        };
+
+        var replyTo = NormalizarEmailOpcional(responderPara);
+        if (replyTo is not null)
+        {
+            payload["replyTo"] = new { email = replyTo };
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email")
+        {
+            Content = new StringContent(JsonSerializer.Serialize(payload, _jsonOptions), Encoding.UTF8, "application/json")
+        };
+        request.Headers.TryAddWithoutValidation("api-key", _configuracaoLoja.BrevoApiKey);
+
+        using var response = EmailHttpClient.SendAsync(request).GetAwaiter().GetResult();
+        var responseBody = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(CriarMensagemErroBrevo(response.StatusCode, responseBody));
+        }
+    }
+
+    private static string CriarHtmlEmail(string texto)
+    {
+        var corpo = WebUtility.HtmlEncode(texto).Replace("\n", "<br>", StringComparison.Ordinal);
+        return $"""
+            <html>
+            <body style="font-family: Arial, sans-serif; color: #1f1f1f; line-height: 1.5;">
+            <p>{corpo}</p>
+            </body>
+            </html>
+            """;
+    }
+
+    private static string CriarMensagemErroBrevo(HttpStatusCode statusCode, string responseBody)
+    {
+        if (statusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            return "A Brevo recusou a API key. Confira se a chave foi copiada inteira em SMTP & API > API Keys.";
+        }
+
+        if (responseBody.Contains("sender", StringComparison.OrdinalIgnoreCase))
+        {
+            return "A Brevo recusou o remetente. Verifique na Brevo se o e-mail remetente foi confirmado/validado.";
+        }
+
+        return $"A Brevo nao aceitou o envio ({(int)statusCode}). Verifique a API key e o remetente na Brevo.";
+    }
+
     private static string CriarMensagemErroEmail(Exception ex)
     {
         var mensagem = ex.Message;
@@ -2240,7 +2350,7 @@ public sealed class LojaService
         if (textoCompleto.Contains("timed out", StringComparison.OrdinalIgnoreCase) ||
             textoCompleto.Contains("timeout", StringComparison.OrdinalIgnoreCase))
         {
-            return "Nao foi possivel conectar ao Gmail dentro do tempo limite. Confira a senha de app do Gmail; se continuar, a hospedagem pode estar bloqueando SMTP e a melhor saida e usar um servico de e-mail por API, como Brevo, Resend ou SendGrid.";
+            return "Nao foi possivel conectar ao serviço de e-mail dentro do tempo limite. Confira a API key/remetente da Brevo ou as credenciais SMTP.";
         }
 
         if (textoCompleto.Contains("authentication", StringComparison.OrdinalIgnoreCase) ||
@@ -2528,8 +2638,10 @@ public sealed class LojaService
                 MensagemPagamento TEXT NOT NULL,
                 MensagemPagamentoCartao TEXT NOT NULL,
                 EmailNotificacoesAtivo INTEGER NOT NULL,
+                EmailProvedor TEXT NOT NULL,
                 EmailRemetente TEXT NOT NULL,
                 EmailPedidosDestino TEXT NOT NULL,
+                BrevoApiKey TEXT NOT NULL,
                 SmtpHost TEXT NOT NULL,
                 SmtpPorta INTEGER NOT NULL,
                 SmtpUsuario TEXT NOT NULL,
@@ -2579,8 +2691,10 @@ public sealed class LojaService
         GarantirColuna(connection, "LojaConfiguracao", "MensagemPagamento", "TEXT NOT NULL DEFAULT ''");
         GarantirColuna(connection, "LojaConfiguracao", "MensagemPagamentoCartao", "TEXT NOT NULL DEFAULT ''");
         GarantirColuna(connection, "LojaConfiguracao", "EmailNotificacoesAtivo", "INTEGER NOT NULL DEFAULT 0");
+        GarantirColuna(connection, "LojaConfiguracao", "EmailProvedor", "TEXT NOT NULL DEFAULT 'Brevo'");
         GarantirColuna(connection, "LojaConfiguracao", "EmailRemetente", "TEXT NOT NULL DEFAULT ''");
         GarantirColuna(connection, "LojaConfiguracao", "EmailPedidosDestino", "TEXT NOT NULL DEFAULT ''");
+        GarantirColuna(connection, "LojaConfiguracao", "BrevoApiKey", "TEXT NOT NULL DEFAULT ''");
         GarantirColuna(connection, "LojaConfiguracao", "SmtpHost", "TEXT NOT NULL DEFAULT ''");
         GarantirColuna(connection, "LojaConfiguracao", "SmtpPorta", "INTEGER NOT NULL DEFAULT 587");
         GarantirColuna(connection, "LojaConfiguracao", "SmtpUsuario", "TEXT NOT NULL DEFAULT ''");
@@ -3137,8 +3251,10 @@ public sealed class LojaService
         _configuracaoLoja.MensagemPagamento = ReadString(reader, "MensagemPagamento");
         _configuracaoLoja.MensagemPagamentoCartao = ReadString(reader, "MensagemPagamentoCartao");
         _configuracaoLoja.EmailNotificacoesAtivo = ReadBool(reader, "EmailNotificacoesAtivo");
+        _configuracaoLoja.EmailProvedor = NormalizarProvedorEmail(ReadString(reader, "EmailProvedor"));
         _configuracaoLoja.EmailRemetente = ReadString(reader, "EmailRemetente");
         _configuracaoLoja.EmailPedidosDestino = ReadString(reader, "EmailPedidosDestino");
+        _configuracaoLoja.BrevoApiKey = ReadString(reader, "BrevoApiKey");
         _configuracaoLoja.SmtpHost = ReadString(reader, "SmtpHost");
         _configuracaoLoja.SmtpPorta = ReadInt(reader, "SmtpPorta");
         _configuracaoLoja.SmtpUsuario = ReadString(reader, "SmtpUsuario");
@@ -3468,8 +3584,8 @@ public sealed class LojaService
                 WhatsappLoja, InstagramLoja, EnderecoLoja, PixChave, PixNomeRecebedor,
                 PixCidade, PixOnlineAtivo, CartaoOnlineAtivo, CheckoutCartaoNome,
                 CheckoutCartaoUrl, MensagemPagamento, MensagemPagamentoCartao,
-                EmailNotificacoesAtivo, EmailRemetente, EmailPedidosDestino,
-                SmtpHost, SmtpPorta, SmtpUsuario, SmtpSenha, SmtpSsl,
+                EmailNotificacoesAtivo, EmailProvedor, EmailRemetente, EmailPedidosDestino,
+                BrevoApiKey, SmtpHost, SmtpPorta, SmtpUsuario, SmtpSenha, SmtpSsl,
                 BackupAutomaticoAtivo, BackupIntervaloHoras, BackupUltimoEm,
                 GatewayPagamentoProvedor, GatewayPagamentoAtivo, GatewayPagamentoProducao,
                 GatewayPagamentoPublicKey, GatewayPagamentoAccessToken,
@@ -3485,8 +3601,8 @@ public sealed class LojaService
                 $WhatsappLoja, $InstagramLoja, $EnderecoLoja, $PixChave, $PixNomeRecebedor,
                 $PixCidade, $PixOnlineAtivo, $CartaoOnlineAtivo, $CheckoutCartaoNome,
                 $CheckoutCartaoUrl, $MensagemPagamento, $MensagemPagamentoCartao,
-                $EmailNotificacoesAtivo, $EmailRemetente, $EmailPedidosDestino,
-                $SmtpHost, $SmtpPorta, $SmtpUsuario, $SmtpSenha, $SmtpSsl,
+                $EmailNotificacoesAtivo, $EmailProvedor, $EmailRemetente, $EmailPedidosDestino,
+                $BrevoApiKey, $SmtpHost, $SmtpPorta, $SmtpUsuario, $SmtpSenha, $SmtpSsl,
                 $BackupAutomaticoAtivo, $BackupIntervaloHoras, $BackupUltimoEm,
                 $GatewayPagamentoProvedor, $GatewayPagamentoAtivo, $GatewayPagamentoProducao,
                 $GatewayPagamentoPublicKey, $GatewayPagamentoAccessToken,
@@ -3530,8 +3646,10 @@ public sealed class LojaService
         Add(command, "$MensagemPagamento", _configuracaoLoja.MensagemPagamento);
         Add(command, "$MensagemPagamentoCartao", _configuracaoLoja.MensagemPagamentoCartao);
         Add(command, "$EmailNotificacoesAtivo", _configuracaoLoja.EmailNotificacoesAtivo);
+        Add(command, "$EmailProvedor", _configuracaoLoja.EmailProvedor);
         Add(command, "$EmailRemetente", _configuracaoLoja.EmailRemetente);
         Add(command, "$EmailPedidosDestino", _configuracaoLoja.EmailPedidosDestino);
+        Add(command, "$BrevoApiKey", _configuracaoLoja.BrevoApiKey);
         Add(command, "$SmtpHost", _configuracaoLoja.SmtpHost);
         Add(command, "$SmtpPorta", _configuracaoLoja.SmtpPorta);
         Add(command, "$SmtpUsuario", _configuracaoLoja.SmtpUsuario);
@@ -4382,8 +4500,10 @@ public sealed class LojaService
             _configuracaoLoja.MensagemPagamento,
             _configuracaoLoja.MensagemPagamentoCartao,
             _configuracaoLoja.EmailNotificacoesAtivo,
+            _configuracaoLoja.EmailProvedor,
             _configuracaoLoja.EmailRemetente,
             _configuracaoLoja.EmailPedidosDestino,
+            !string.IsNullOrWhiteSpace(_configuracaoLoja.BrevoApiKey),
             _configuracaoLoja.SmtpHost,
             _configuracaoLoja.SmtpPorta,
             _configuracaoLoja.SmtpUsuario,
@@ -4517,36 +4637,15 @@ public sealed class LojaService
 
     private void TentarEnviarEmailPedido(PedidoOnline pedido, string assunto, string corpo)
     {
-        if (!_configuracaoLoja.EmailNotificacoesAtivo ||
-            string.IsNullOrWhiteSpace(_configuracaoLoja.EmailRemetente) ||
-            string.IsNullOrWhiteSpace(_configuracaoLoja.EmailPedidosDestino) ||
-            string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpHost))
+        if (!EmailConfigurado())
         {
             return;
         }
 
         try
         {
-            using var mensagem = new MailMessage
-            {
-                From = new MailAddress(_configuracaoLoja.EmailRemetente),
-                Subject = assunto,
-                Body = corpo,
-                IsBodyHtml = false
-            };
-
-            foreach (var destino in _configuracaoLoja.EmailPedidosDestino.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                mensagem.To.Add(destino);
-            }
-
-            if (EmailValido(pedido.EmailCliente))
-            {
-                mensagem.ReplyToList.Add(pedido.EmailCliente);
-            }
-
-            using var smtp = CriarClienteSmtp();
-            smtp.Send(mensagem);
+            var destinos = _configuracaoLoja.EmailPedidosDestino.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            EnviarEmail(destinos, assunto, corpo, pedido.EmailCliente);
         }
         catch
         {
@@ -4554,13 +4653,39 @@ public sealed class LojaService
         }
     }
 
+    private string? ValidarConfiguracaoEmail()
+    {
+        if (string.IsNullOrWhiteSpace(_configuracaoLoja.EmailRemetente) ||
+            string.IsNullOrWhiteSpace(_configuracaoLoja.EmailPedidosDestino))
+        {
+            return "Configure remetente e e-mail dos pedidos antes de testar.";
+        }
+
+        if (_configuracaoLoja.EmailProvedor == "Brevo")
+        {
+            return string.IsNullOrWhiteSpace(_configuracaoLoja.BrevoApiKey)
+                ? "Informe a API key da Brevo antes de testar."
+                : null;
+        }
+
+        if (string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpHost))
+        {
+            return "Configure o servidor SMTP antes de testar.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpUsuario) &&
+            string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpSenha))
+        {
+            return "Informe a senha SMTP. No Gmail use a senha de app, nao a senha normal da conta.";
+        }
+
+        return null;
+    }
+
     private bool EmailConfigurado()
     {
         return _configuracaoLoja.EmailNotificacoesAtivo &&
-            !string.IsNullOrWhiteSpace(_configuracaoLoja.EmailRemetente) &&
-            !string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpHost) &&
-            (string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpUsuario) ||
-             !string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpSenha));
+            ValidarConfiguracaoEmail() is null;
     }
 
     private void TentarEnviarEmailSimples(string destino, string assunto, string corpo)
@@ -4572,17 +4697,7 @@ public sealed class LojaService
 
         try
         {
-            using var mensagem = new MailMessage
-            {
-                From = new MailAddress(_configuracaoLoja.EmailRemetente),
-                Subject = assunto,
-                Body = corpo,
-                IsBodyHtml = false
-            };
-            mensagem.To.Add(destino);
-
-            using var smtp = CriarClienteSmtp();
-            smtp.Send(mensagem);
+            EnviarEmail([destino], assunto, corpo);
         }
         catch
         {
@@ -4909,6 +5024,16 @@ public sealed class LojaService
     private static string NormalizarEmail(string email)
     {
         return email.Trim().ToLowerInvariant();
+    }
+
+    private static string NormalizarProvedorEmail(string? provedor)
+    {
+        var texto = NormalizarTextoOpcional(provedor);
+        return texto?.ToLowerInvariant() switch
+        {
+            "brevo" => "Brevo",
+            _ => "Smtp"
+        };
     }
 
     private static string? NormalizarEmailOpcional(string? email)

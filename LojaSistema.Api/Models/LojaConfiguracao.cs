@@ -40,8 +40,10 @@ public sealed class LojaConfiguracao
     public string MensagemPagamento { get; set; } = "Após finalizar o pedido, envie o comprovante pelo WhatsApp da loja para confirmação.";
     public string MensagemPagamentoCartao { get; set; } = "Finalize o pedido e use o link de pagamento, ou aguarde a loja enviar a cobrança.";
     public bool EmailNotificacoesAtivo { get; set; }
+    public string EmailProvedor { get; set; } = "Brevo";
     public string EmailRemetente { get; set; } = "";
     public string EmailPedidosDestino { get; set; } = "";
+    public string BrevoApiKey { get; set; } = "";
     public string SmtpHost { get; set; } = "";
     public int SmtpPorta { get; set; } = 587;
     public string SmtpUsuario { get; set; } = "";

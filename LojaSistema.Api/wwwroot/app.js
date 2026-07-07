@@ -211,6 +211,8 @@ function cacheElements() {
     els.paymentMessageInput = document.querySelector("#paymentMessageInput");
     els.cardPaymentMessageInput = document.querySelector("#cardPaymentMessageInput");
     els.emailNotificationsActiveInput = document.querySelector("#emailNotificationsActiveInput");
+    els.emailProviderInput = document.querySelector("#emailProviderInput");
+    els.brevoApiKeyInput = document.querySelector("#brevoApiKeyInput");
     els.emailSenderInput = document.querySelector("#emailSenderInput");
     els.emailOrdersInput = document.querySelector("#emailOrdersInput");
     els.smtpHostInput = document.querySelector("#smtpHostInput");
@@ -1419,6 +1421,9 @@ function renderSiteConfig() {
     els.paymentMessageInput.value = config.mensagemPagamento || "";
     els.cardPaymentMessageInput.value = config.mensagemPagamentoCartao || "";
     els.emailNotificationsActiveInput.checked = Boolean(config.emailNotificacoesAtivo);
+    els.emailProviderInput.value = config.emailProvedor || "Brevo";
+    els.brevoApiKeyInput.value = "";
+    els.brevoApiKeyInput.placeholder = config.brevoApiKeyConfigurada ? "Chave Brevo já configurada" : "Cole a chave criada na Brevo";
     els.emailSenderInput.value = config.emailRemetente || "";
     els.emailOrdersInput.value = config.emailPedidosDestino || "";
     els.smtpHostInput.value = config.smtpHost || "";
@@ -2747,8 +2752,10 @@ function buildSiteConfigPayload() {
         mensagemPagamento: emptyToNull(els.paymentMessageInput.value),
         mensagemPagamentoCartao: emptyToNull(els.cardPaymentMessageInput.value),
         emailNotificacoesAtivo: els.emailNotificationsActiveInput.checked,
+        emailProvedor: els.emailProviderInput.value,
         emailRemetente: emptyToNull(els.emailSenderInput.value),
         emailPedidosDestino: emptyToNull(els.emailOrdersInput.value),
+        brevoApiKey: emptyToNull(els.brevoApiKeyInput.value),
         smtpHost: emptyToNull(els.smtpHostInput.value),
         smtpPorta: Number(els.smtpPortInput.value || 587),
         smtpUsuario: emptyToNull(els.smtpUserInput.value),

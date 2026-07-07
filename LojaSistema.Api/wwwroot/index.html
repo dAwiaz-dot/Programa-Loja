@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
     <link rel="shortcut icon" href="/favicon.ico">
-    <link rel="stylesheet" href="/styles.css?v=20260706-1">
+    <link rel="stylesheet" href="/styles.css?v=20260706-2">
 </head>
 <body>
     <div class="app-shell">
@@ -523,6 +523,19 @@
                         <label class="checkbox-line form-span">
                             <input id="emailNotificationsActiveInput" type="checkbox">
                             Enviar e-mails automáticos
+                        </label>
+
+                        <label>
+                            Provedor de e-mail
+                            <select id="emailProviderInput">
+                                <option value="Brevo">Brevo API</option>
+                                <option value="Smtp">SMTP</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            API key Brevo
+                            <input id="brevoApiKeyInput" type="password" autocomplete="new-password" placeholder="Cole a chave criada na Brevo">
                         </label>
 
                         <label>
@@ -1444,6 +1457,6 @@
         </form>
     </div>
 
-    <script src="/app.js?v=20260706-1" defer></script>
+    <script src="/app.js?v=20260706-2" defer></script>
 </body>
 </html>
