@@ -231,6 +231,14 @@ function cacheElements() {
     els.paymentGatewayWebhookSecretInput = document.querySelector("#paymentGatewayWebhookSecretInput");
     els.paymentGatewayWebhookUrlInput = document.querySelector("#paymentGatewayWebhookUrlInput");
     els.privacyPolicyInput = document.querySelector("#privacyPolicyInput");
+    els.exchangePolicyInput = document.querySelector("#exchangePolicyInput");
+    els.companyLegalNameInput = document.querySelector("#companyLegalNameInput");
+    els.companyCnpjInput = document.querySelector("#companyCnpjInput");
+    els.siteCanonicalUrlInput = document.querySelector("#siteCanonicalUrlInput");
+    els.googleAnalyticsIdInput = document.querySelector("#googleAnalyticsIdInput");
+    els.metaPixelIdInput = document.querySelector("#metaPixelIdInput");
+    els.backupEmailActiveInput = document.querySelector("#backupEmailActiveInput");
+    els.backupEmailDestinationInput = document.querySelector("#backupEmailDestinationInput");
     els.deliveryOptionForm = document.querySelector("#deliveryOptionForm");
     els.deliveryOptionId = document.querySelector("#deliveryOptionId");
     els.deliveryName = document.querySelector("#deliveryName");
@@ -1443,6 +1451,14 @@ function renderSiteConfig() {
     els.paymentGatewayWebhookSecretInput.placeholder = config.gatewayPagamentoWebhookSecretConfigurado ? "Segredo já configurado" : "Cole o segredo do webhook";
     els.paymentGatewayWebhookUrlInput.value = config.gatewayPagamentoWebhookUrl || "";
     els.privacyPolicyInput.value = config.politicaPrivacidade || "";
+    els.exchangePolicyInput.value = config.politicaTrocaDevolucao || "";
+    els.companyLegalNameInput.value = config.razaoSocial || "";
+    els.companyCnpjInput.value = config.cnpj || "";
+    els.siteCanonicalUrlInput.value = config.siteUrlCanonica || "";
+    els.googleAnalyticsIdInput.value = config.googleAnalyticsId || "";
+    els.metaPixelIdInput.value = config.metaPixelId || "";
+    els.backupEmailActiveInput.checked = Boolean(config.backupEmailAtivo);
+    els.backupEmailDestinationInput.value = config.backupEmailDestino || "";
 }
 
 function renderDeliveryOptions() {
@@ -2769,7 +2785,15 @@ function buildSiteConfigPayload() {
         gatewayPagamentoPublicKey: emptyToNull(els.paymentGatewayPublicKeyInput.value),
         gatewayPagamentoAccessToken: emptyToNull(els.paymentGatewayAccessTokenInput.value),
         gatewayPagamentoWebhookSecret: emptyToNull(els.paymentGatewayWebhookSecretInput.value),
-        gatewayPagamentoWebhookUrl: emptyToNull(els.paymentGatewayWebhookUrlInput.value)
+        gatewayPagamentoWebhookUrl: emptyToNull(els.paymentGatewayWebhookUrlInput.value),
+        politicaTrocaDevolucao: emptyToNull(els.exchangePolicyInput.value),
+        razaoSocial: emptyToNull(els.companyLegalNameInput.value),
+        cnpj: emptyToNull(els.companyCnpjInput.value),
+        siteUrlCanonica: emptyToNull(els.siteCanonicalUrlInput.value),
+        googleAnalyticsId: emptyToNull(els.googleAnalyticsIdInput.value),
+        metaPixelId: emptyToNull(els.metaPixelIdInput.value),
+        backupEmailAtivo: els.backupEmailActiveInput.checked,
+        backupEmailDestino: emptyToNull(els.backupEmailDestinationInput.value)
     };
 }
 

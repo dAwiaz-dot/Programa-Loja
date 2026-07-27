@@ -57,4 +57,12 @@ public sealed record LojaConfiguracaoResponse(
     bool GatewayPagamentoAccessTokenConfigurado,
     bool GatewayPagamentoWebhookSecretConfigurado,
     string GatewayPagamentoWebhookUrl,
+    string RazaoSocial,
+    string Cnpj,
+    string SiteUrlCanonica,
+    string PoliticaTrocaDevolucao,
+    string GoogleAnalyticsId,
+    string MetaPixelId,
+    bool BackupEmailAtivo,
+    string BackupEmailDestino,
     DateTime AtualizadoEm);

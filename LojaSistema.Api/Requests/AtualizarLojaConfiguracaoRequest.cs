@@ -56,4 +56,12 @@ public sealed record AtualizarLojaConfiguracaoRequest(
     string? GatewayPagamentoPublicKey,
     string? GatewayPagamentoAccessToken,
     string? GatewayPagamentoWebhookSecret,
-    string? GatewayPagamentoWebhookUrl);
+    string? GatewayPagamentoWebhookUrl,
+    string? RazaoSocial,
+    string? Cnpj,
+    string? SiteUrlCanonica,
+    string? PoliticaTrocaDevolucao,
+    string? GoogleAnalyticsId,
+    string? MetaPixelId,
+    bool? BackupEmailAtivo,
+    string? BackupEmailDestino);

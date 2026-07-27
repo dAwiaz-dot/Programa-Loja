@@ -1,9 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.FileProviders;
 using LojaSistema.Api.Models;
 using LojaSistema.Api.Requests;
@@ -89,6 +92,16 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("login", limiter =>
+    {
+        limiter.PermitLimit = 5;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+    });
+});
 
 var app = builder.Build();
 
@@ -98,6 +111,25 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
 }
+
+var caminhoLogErros = Path.Combine(ObterPastaLogs(app.Environment, app.Configuration), "erros.log");
+Directory.CreateDirectory(Path.GetDirectoryName(caminhoLogErros)!);
+
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var feature = context.Features.Get<IExceptionHandlerFeature>();
+        if (feature?.Error is { } excecao)
+        {
+            RegistrarErroServidor(caminhoLogErros, context, excecao);
+        }
+
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync("""{"erro":"Ocorreu um erro inesperado. Tente novamente em instantes."}""");
+    });
+});
 
 app.Use(async (context, next) =>
 {
@@ -110,6 +142,7 @@ app.Use(async (context, next) =>
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.Use(async (context, next) =>
 {
@@ -142,6 +175,28 @@ if (!string.IsNullOrWhiteSpace(ObterStorageRoot(app.Configuration)))
 }
 
 app.UseStaticFiles();
+
+app.MapGet("/admin/erros", () =>
+{
+    if (!File.Exists(caminhoLogErros))
+    {
+        return Results.Ok(Array.Empty<JsonElement>());
+    }
+
+    var ultimasLinhas = File.ReadAllLines(caminhoLogErros).TakeLast(200).Reverse();
+    var registros = ultimasLinhas.Select(linha =>
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<JsonElement>(linha);
+        }
+        catch (JsonException)
+        {
+            return default;
+        }
+    });
+    return Results.Ok(registros);
+}).RequireAuthorization("AdminOnly");
 
 app.MapGet("/health", () => Results.Ok(new
 {
@@ -178,7 +233,7 @@ app.MapPost("/auth/login", async (LoginRequest request, LojaService loja, HttpCo
     await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
     loja.RegistrarAtividadePainel(usuarioPainel.Usuario, "Login", "Acesso ao painel administrativo");
     return Results.Ok(new { usuario = usuarioPainel.Usuario, perfil = usuarioPainel.Perfil, nome = usuarioPainel.NomeExibicao });
-});
+}).RequireRateLimiting("login");
 
 app.MapPost("/auth/logout", async (HttpContext context) =>
 {
@@ -296,7 +351,13 @@ app.MapGet("/loja-api/configuracao", (LojaService loja) =>
     return Results.Ok(new
     {
         config.NomeCriadorSite,
+        config.RazaoSocial,
+        config.Cnpj,
+        config.SiteUrlCanonica,
         config.PoliticaPrivacidade,
+        config.PoliticaTrocaDevolucao,
+        config.GoogleAnalyticsId,
+        config.MetaPixelId,
         config.FreteValorPadrao,
         config.FreteGratisAcimaDe,
         config.PrazoMinimoDias,
@@ -375,19 +436,19 @@ app.MapPost("/clientes/acessar", async (AcessarClienteRequest request, LojaServi
     await context.SignInAsync(clienteScheme, principal);
 
     return Results.Ok(resultado.Valor);
-});
+}).RequireRateLimiting("login");
 
 app.MapPost("/clientes/recuperar-senha", (RecuperarSenhaClienteRequest request, LojaService loja) =>
 {
     var resultado = loja.SolicitarRecuperacaoSenhaCliente(request);
     return resultado.Sucesso ? Results.Ok(new { mensagem = resultado.Valor }) : Results.BadRequest(new { erro = resultado.Erro });
-});
+}).RequireRateLimiting("login");
 
 app.MapPost("/clientes/redefinir-senha", (RedefinirSenhaClienteRequest request, LojaService loja) =>
 {
     var resultado = loja.RedefinirSenhaCliente(request);
     return resultado.Sucesso ? Results.Ok(resultado.Valor) : Results.BadRequest(new { erro = resultado.Erro });
-});
+}).RequireRateLimiting("login");
 
 app.MapPost("/clientes/logout", async (HttpContext context) =>
 {
@@ -894,6 +955,51 @@ static string? ObterStorageRoot(IConfiguration configuration)
     return configuration["NANA_STORAGE_ROOT"]?.Trim();
 }
 
+static string ObterPastaLogs(IWebHostEnvironment environment, IConfiguration configuration)
+{
+    var storageRoot = ObterStorageRoot(configuration);
+    var baseDir = !string.IsNullOrWhiteSpace(storageRoot)
+        ? Path.Combine(storageRoot, "Data")
+        : Path.Combine(environment.ContentRootPath, "Data");
+    return Path.Combine(baseDir, "logs");
+}
+
+static void RegistrarErroServidor(string caminhoLog, HttpContext context, Exception excecao)
+{
+    try
+    {
+        lock (ErroLogSync.Lock)
+        {
+            var linha = JsonSerializer.Serialize(new
+            {
+                quando = DateTime.UtcNow,
+                metodo = context.Request.Method,
+                caminho = context.Request.Path.ToString(),
+                tipo = excecao.GetType().Name,
+                mensagem = excecao.Message
+            });
+
+            File.AppendAllText(caminhoLog, linha + Environment.NewLine);
+            LimitarTamanhoLogErros(caminhoLog);
+        }
+    }
+    catch
+    {
+        // Nunca deixar uma falha ao gravar o log derrubar o tratamento de erro em si.
+    }
+}
+
+static void LimitarTamanhoLogErros(string caminhoLog)
+{
+    const int maximoLinhas = 1000;
+    const int manterLinhas = 500;
+    var linhas = File.ReadAllLines(caminhoLog);
+    if (linhas.Length > maximoLinhas)
+    {
+        File.WriteAllLines(caminhoLog, linhas[^manterLinhas..]);
+    }
+}
+
 static string? ObterJsonString(JsonElement element, string propertyName)
 {
     return element.TryGetProperty(propertyName, out var property) && property.ValueKind != JsonValueKind.Null
@@ -902,3 +1008,8 @@ static string? ObterJsonString(JsonElement element, string propertyName)
 }
 
 public sealed record LoginRequest(string? Usuario, string? Senha);
+
+static class ErroLogSync
+{
+    public static readonly object Lock = new();
+}

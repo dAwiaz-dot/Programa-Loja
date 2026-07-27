@@ -4,6 +4,23 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Nana Modas</title>
+    <meta name="description" content="Nana Modas — peças selecionadas, estética premium e compra online integrada ao estoque da loja física.">
+    <!--
+      Tags fixas (não mudam com o conteúdo do painel) porque WhatsApp/Instagram/Facebook
+      não executam o loja.js ao gerar a prévia do link — precisam achar isso pronto no HTML.
+      Troque og:url e og:image pelo domínio final e por uma imagem de banner (1200x630)
+      quando tiver uma pronta; por ora usa o ícone da loja.
+    -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Nana Modas">
+    <meta property="og:title" content="Nana Modas">
+    <meta property="og:description" content="Peças selecionadas, estética premium e compra online integrada ao estoque da loja física.">
+    <meta property="og:image" content="/android-chrome-512x512.png">
+    <meta property="og:url" content="https://SEU-DOMINIO-AQUI/">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Nana Modas">
+    <meta name="twitter:description" content="Peças selecionadas, estética premium e compra online integrada ao estoque da loja física.">
+    <meta name="twitter:image" content="/android-chrome-512x512.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -41,6 +58,7 @@
             <button class="store-nav-button" type="button" data-store-tab="account">Entrar</button>
             <button class="store-nav-button" type="button" data-store-tab="orders">Meus pedidos</button>
             <button class="store-nav-button" type="button" data-store-tab="privacy">Privacidade</button>
+            <button class="store-nav-button" type="button" data-store-tab="exchanges">Trocas e devoluções</button>
             <button class="store-nav-button" type="button" data-store-tab="bag">Meu carrinho</button>
         </nav>
     </header>
@@ -66,18 +84,25 @@
                 <div class="hero-card" aria-label="Resumo da loja Nana Modas">
                     <div class="hero-card-footer">
                         <div>
-                            <span>Peças online</span>
+                            <span>Peças disponíveis</span>
                             <strong id="storeProductCount">0</strong>
                         </div>
                         <div>
-                            <span>Na sacola</span>
-                            <strong id="storeCartCount">0</strong>
+                            <span>Pagamento</span>
+                            <strong>Pix e cartão</strong>
                         </div>
                         <div>
-                            <span>Status</span>
-                            <strong id="storeStatus">Carregando</strong>
+                            <span>Entrega</span>
+                            <strong>Combinada com a loja</strong>
                         </div>
                     </div>
+                </div>
+                <!-- storeCartCount e storeStatus não aparecem mais na vitrine (eram
+                     informação de painel, não de cliente), mas seguem no DOM porque
+                     o loja.js atualiza esses elementos diretamente. -->
+                <div hidden aria-hidden="true">
+                    <span id="storeCartCount">0</span>
+                    <span id="storeStatus">Carregando</span>
                 </div>
             </section>
 
@@ -160,24 +185,6 @@
                 <div class="home-section-actions">
                     <button class="checkout-button" type="button" data-store-tab="catalog" data-store-collection="launches">Ver lançamentos</button>
                 </div>
-            </section>
-
-            <section class="home-assurance">
-                <article>
-                    <span>01</span>
-                    <strong>Compra acompanhada</strong>
-                    <p>O pedido fica registrado na sua conta e pode ser acompanhado pela área Meus pedidos.</p>
-                </article>
-                <article>
-                    <span>02</span>
-                    <strong>Estoque integrado</strong>
-                    <p>As peças vendidas online e no PDV baixam do mesmo estoque da Nana Modas.</p>
-                </article>
-                <article>
-                    <span>03</span>
-                    <strong>Atendimento próximo</strong>
-                    <p>Pagamento, entrega e dúvidas podem ser confirmados diretamente com a loja.</p>
-                </article>
             </section>
 
             <section class="store-contact-strip" id="storeContactStrip">
@@ -540,6 +547,16 @@
                 <div class="privacy-copy" id="privacyPolicyText"></div>
             </article>
         </section>
+
+        <section class="store-view" data-store-view="exchanges" id="trocas">
+            <article class="info-panel privacy-panel">
+                <div class="section-heading">
+                    <p class="store-eyebrow">Direito do consumidor</p>
+                    <h2>Trocas e devoluções</h2>
+                </div>
+                <div class="privacy-copy" id="exchangePolicyText"></div>
+            </article>
+        </section>
     </main>
 
     <footer class="store-footer">
@@ -555,9 +572,13 @@
             <button type="button" data-store-tab="account">Minha conta</button>
             <button type="button" data-store-tab="orders">Meus pedidos</button>
             <button type="button" data-store-tab="privacy">Privacidade</button>
+            <button type="button" data-store-tab="exchanges">Trocas e devoluções</button>
         </nav>
 
-        <div class="footer-contact" id="footerContact"></div>
+        <div class="footer-contact-wrap">
+            <div class="footer-contact" id="footerContact"></div>
+            <p class="footer-legal" id="footerLegal" hidden></p>
+        </div>
 
         <p>Site criado por <strong id="siteCreatorName">Davi Silva Dias</strong></p>
     </footer>

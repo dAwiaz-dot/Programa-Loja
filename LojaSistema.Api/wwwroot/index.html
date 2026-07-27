@@ -638,6 +638,61 @@
                             <textarea id="privacyPolicyInput" rows="6" required></textarea>
                         </label>
 
+                        <label class="form-span">
+                            Política de trocas e devoluções
+                            <textarea id="exchangePolicyInput" rows="4"></textarea>
+                        </label>
+
+                        <label>
+                            Razão social
+                            <input id="companyLegalNameInput" type="text" autocomplete="off" placeholder="Nome Fantasia Comércio de Roupas LTDA">
+                        </label>
+
+                        <label>
+                            CNPJ
+                            <input id="companyCnpjInput" type="text" autocomplete="off" placeholder="00.000.000/0001-00">
+                        </label>
+
+                        <div class="config-note form-span">
+                            <strong>Rodapé legal</strong>
+                            <span>Razão social e CNPJ aparecem juntos no rodapé da loja. Deixe em branco pra não mostrar essa linha.</span>
+                        </div>
+
+                        <label class="form-span">
+                            URL do site (domínio final, com https://)
+                            <input id="siteCanonicalUrlInput" type="url" autocomplete="off" placeholder="https://www.nanamodas.com.br/">
+                        </label>
+
+                        <label>
+                            Google Analytics (Measurement ID)
+                            <input id="googleAnalyticsIdInput" type="text" autocomplete="off" placeholder="G-XXXXXXXXXX">
+                        </label>
+
+                        <label>
+                            Meta Pixel (ID)
+                            <input id="metaPixelIdInput" type="text" autocomplete="off" placeholder="000000000000000">
+                        </label>
+
+                        <div class="config-note form-span">
+                            <strong>Rastreamento</strong>
+                            <span>Enquanto esses campos ficarem vazios, nenhum script de rastreamento é carregado na loja. Preencha só depois de criar as contas no Google Analytics e/ou Meta Business.</span>
+                        </div>
+
+                        <label class="checkbox-line">
+                            <input id="backupEmailActiveInput" type="checkbox">
+                            Enviar backup automático por e-mail
+                        </label>
+
+                        <label>
+                            E-mail de destino do backup
+                            <input id="backupEmailDestinationInput" type="email" autocomplete="off" placeholder="Deixe em branco para usar o e-mail de pedidos">
+                        </label>
+
+                        <div class="config-note form-span">
+                            <strong>Backup por e-mail</strong>
+                            <span>Usa o mesmo provedor de e-mail (Brevo ou SMTP) configurado acima. Sem e-mail configurado, essa opção não tem efeito.</span>
+                        </div>
+
                         <button class="button button-primary form-action" type="submit">Salvar configurações</button>
                     </form>
                 </section>

@@ -961,6 +961,14 @@ public sealed class LojaService
             _configuracaoLoja.GatewayPagamentoAccessToken = gatewayPagamentoAccessToken;
             _configuracaoLoja.GatewayPagamentoWebhookSecret = gatewayPagamentoWebhookSecret;
             _configuracaoLoja.GatewayPagamentoWebhookUrl = gatewayWebhookUrl;
+            _configuracaoLoja.RazaoSocial = NormalizarTextoOpcional(request.RazaoSocial) ?? "";
+            _configuracaoLoja.Cnpj = NormalizarTextoOpcional(request.Cnpj) ?? "";
+            _configuracaoLoja.SiteUrlCanonica = NormalizarTextoOpcional(request.SiteUrlCanonica) ?? "";
+            _configuracaoLoja.PoliticaTrocaDevolucao = NormalizarTextoOpcional(request.PoliticaTrocaDevolucao) ?? _configuracaoLoja.PoliticaTrocaDevolucao;
+            _configuracaoLoja.GoogleAnalyticsId = NormalizarTextoOpcional(request.GoogleAnalyticsId) ?? "";
+            _configuracaoLoja.MetaPixelId = NormalizarTextoOpcional(request.MetaPixelId) ?? "";
+            _configuracaoLoja.BackupEmailAtivo = request.BackupEmailAtivo ?? false;
+            _configuracaoLoja.BackupEmailDestino = NormalizarEmailOpcional(request.BackupEmailDestino) ?? "";
             _configuracaoLoja.AtualizadoEm = DateTime.UtcNow;
 
             SalvarTudo();
@@ -2155,6 +2163,10 @@ public sealed class LojaService
 
     public string? CriarBackupAutomaticoSeNecessario()
     {
+        // O envio por e-mail faz I/O de rede (SMTP/Brevo) e não pode acontecer dentro do
+        // lock: _sync é usado por praticamente toda operação do serviço, e travar a loja
+        // inteira até o e-mail terminar de enviar deixaria o site inteiro lento/travado.
+        string? destino;
         lock (_sync)
         {
             if (!_configuracaoLoja.BackupAutomaticoAtivo)
@@ -2173,12 +2185,61 @@ public sealed class LojaService
             var backupDirectory = ObterDiretorioBackups();
             Directory.CreateDirectory(backupDirectory);
             var nomeArquivo = $"nana-modas-auto-{agora:yyyyMMdd-HHmmss}.db";
-            var destino = Path.Combine(backupDirectory, nomeArquivo);
+            destino = Path.Combine(backupDirectory, nomeArquivo);
             File.Copy(_databasePath, destino, overwrite: true);
             _configuracaoLoja.BackupUltimoEm = agora;
             _configuracaoLoja.AtualizadoEm = agora;
             SalvarTudo();
-            return destino;
+        }
+
+        EnviarBackupPorEmailSeConfigurado(destino);
+        return destino;
+    }
+
+    // Falha ao enviar o backup por e-mail nunca deve invalidar o backup em si
+    // (o arquivo já está salvo em disco de qualquer forma).
+    private void EnviarBackupPorEmailSeConfigurado(string caminhoArquivoBackup)
+    {
+        string? destino;
+        bool provedorBrevo;
+        lock (_sync)
+        {
+            if (!_configuracaoLoja.BackupEmailAtivo)
+            {
+                return;
+            }
+
+            destino = NormalizarEmailOpcional(_configuracaoLoja.BackupEmailDestino)
+                ?? NormalizarEmailOpcional(_configuracaoLoja.EmailPedidosDestino);
+            provedorBrevo = _configuracaoLoja.EmailProvedor == "Brevo";
+
+            if (string.IsNullOrWhiteSpace(destino) || string.IsNullOrWhiteSpace(_configuracaoLoja.EmailRemetente))
+            {
+                return;
+            }
+
+            if (provedorBrevo && string.IsNullOrWhiteSpace(_configuracaoLoja.BrevoApiKey))
+            {
+                return;
+            }
+
+            if (!provedorBrevo && string.IsNullOrWhiteSpace(_configuracaoLoja.SmtpHost))
+            {
+                return;
+            }
+        }
+
+        try
+        {
+            EnviarEmail(
+                [destino],
+                $"Backup Nana Modas - {DateTime.Now:dd/MM/yyyy HH:mm}",
+                "Segue em anexo o backup automático do banco de dados da Nana Modas.",
+                caminhoAnexo: caminhoArquivoBackup);
+        }
+        catch (Exception ex)
+        {
+            RegistrarAtividadePainel("sistema", "Falha no envio do backup por e-mail", ex.Message);
         }
     }
 
@@ -2236,7 +2297,7 @@ public sealed class LojaService
         return smtp;
     }
 
-    private void EnviarEmail(IEnumerable<string> destinos, string assunto, string corpo, string? responderPara = null)
+    private void EnviarEmail(IEnumerable<string> destinos, string assunto, string corpo, string? responderPara = null, string? caminhoAnexo = null)
     {
         var destinatarios = destinos
             .Select(NormalizarEmailOpcional)
@@ -2251,7 +2312,7 @@ public sealed class LojaService
 
         if (_configuracaoLoja.EmailProvedor == "Brevo")
         {
-            EnviarEmailBrevo(destinatarios, assunto, corpo, responderPara);
+            EnviarEmailBrevo(destinatarios, assunto, corpo, responderPara, caminhoAnexo);
             return;
         }
 
@@ -2274,11 +2335,25 @@ public sealed class LojaService
             mensagem.ReplyToList.Add(replyTo);
         }
 
-        using var smtp = CriarClienteSmtp();
-        smtp.Send(mensagem);
+        Attachment? anexo = null;
+        if (!string.IsNullOrWhiteSpace(caminhoAnexo) && File.Exists(caminhoAnexo))
+        {
+            anexo = new Attachment(caminhoAnexo);
+            mensagem.Attachments.Add(anexo);
+        }
+
+        try
+        {
+            using var smtp = CriarClienteSmtp();
+            smtp.Send(mensagem);
+        }
+        finally
+        {
+            anexo?.Dispose();
+        }
     }
 
-    private void EnviarEmailBrevo(IReadOnlyCollection<string> destinos, string assunto, string corpo, string? responderPara)
+    private void EnviarEmailBrevo(IReadOnlyCollection<string> destinos, string assunto, string corpo, string? responderPara, string? caminhoAnexo = null)
     {
         var payload = new Dictionary<string, object?>
         {
@@ -2297,6 +2372,18 @@ public sealed class LojaService
         if (replyTo is not null)
         {
             payload["replyTo"] = new { email = replyTo };
+        }
+
+        if (!string.IsNullOrWhiteSpace(caminhoAnexo) && File.Exists(caminhoAnexo))
+        {
+            payload["attachment"] = new[]
+            {
+                new
+                {
+                    content = Convert.ToBase64String(File.ReadAllBytes(caminhoAnexo)),
+                    name = Path.GetFileName(caminhoAnexo)
+                }
+            };
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.brevo.com/v3/smtp/email")
@@ -2710,6 +2797,14 @@ public sealed class LojaService
         GarantirColuna(connection, "LojaConfiguracao", "GatewayPagamentoAccessToken", "TEXT NOT NULL DEFAULT ''");
         GarantirColuna(connection, "LojaConfiguracao", "GatewayPagamentoWebhookSecret", "TEXT NOT NULL DEFAULT ''");
         GarantirColuna(connection, "LojaConfiguracao", "GatewayPagamentoWebhookUrl", "TEXT NOT NULL DEFAULT ''");
+        GarantirColuna(connection, "LojaConfiguracao", "RazaoSocial", "TEXT NOT NULL DEFAULT ''");
+        GarantirColuna(connection, "LojaConfiguracao", "Cnpj", "TEXT NOT NULL DEFAULT ''");
+        GarantirColuna(connection, "LojaConfiguracao", "SiteUrlCanonica", "TEXT NOT NULL DEFAULT ''");
+        GarantirColuna(connection, "LojaConfiguracao", "PoliticaTrocaDevolucao", "TEXT NOT NULL DEFAULT 'Você pode desistir da compra em até 7 dias corridos após o recebimento, sem precisar justificar o motivo, conforme o art. 49 do Código de Defesa do Consumidor. Nesse caso, o valor pago é reembolsado integralmente, incluindo o frete. Para trocas por tamanho/cor ou devolução por defeito, entre em contato pelos canais de atendimento da loja informando o número do pedido; o produto deve estar sem uso, com etiqueta e embalagem originais.'");
+        GarantirColuna(connection, "LojaConfiguracao", "GoogleAnalyticsId", "TEXT NOT NULL DEFAULT ''");
+        GarantirColuna(connection, "LojaConfiguracao", "MetaPixelId", "TEXT NOT NULL DEFAULT ''");
+        GarantirColuna(connection, "LojaConfiguracao", "BackupEmailAtivo", "INTEGER NOT NULL DEFAULT 0");
+        GarantirColuna(connection, "LojaConfiguracao", "BackupEmailDestino", "TEXT NOT NULL DEFAULT ''");
 
         ExecuteNonQuery(connection, null, """
             CREATE TABLE IF NOT EXISTS CuponsDesconto (
@@ -3270,6 +3365,14 @@ public sealed class LojaService
         _configuracaoLoja.GatewayPagamentoAccessToken = ReadString(reader, "GatewayPagamentoAccessToken");
         _configuracaoLoja.GatewayPagamentoWebhookSecret = ReadString(reader, "GatewayPagamentoWebhookSecret");
         _configuracaoLoja.GatewayPagamentoWebhookUrl = ReadString(reader, "GatewayPagamentoWebhookUrl");
+        _configuracaoLoja.RazaoSocial = ReadString(reader, "RazaoSocial");
+        _configuracaoLoja.Cnpj = ReadString(reader, "Cnpj");
+        _configuracaoLoja.SiteUrlCanonica = ReadString(reader, "SiteUrlCanonica");
+        _configuracaoLoja.PoliticaTrocaDevolucao = ReadString(reader, "PoliticaTrocaDevolucao");
+        _configuracaoLoja.GoogleAnalyticsId = ReadString(reader, "GoogleAnalyticsId");
+        _configuracaoLoja.MetaPixelId = ReadString(reader, "MetaPixelId");
+        _configuracaoLoja.BackupEmailAtivo = ReadBool(reader, "BackupEmailAtivo");
+        _configuracaoLoja.BackupEmailDestino = ReadString(reader, "BackupEmailDestino");
         _configuracaoLoja.AtualizadoEm = ReadDateTime(reader, "AtualizadoEm");
     }
 
@@ -3589,7 +3692,9 @@ public sealed class LojaService
                 BackupAutomaticoAtivo, BackupIntervaloHoras, BackupUltimoEm,
                 GatewayPagamentoProvedor, GatewayPagamentoAtivo, GatewayPagamentoProducao,
                 GatewayPagamentoPublicKey, GatewayPagamentoAccessToken,
-                GatewayPagamentoWebhookSecret, GatewayPagamentoWebhookUrl, AtualizadoEm)
+                GatewayPagamentoWebhookSecret, GatewayPagamentoWebhookUrl,
+                RazaoSocial, Cnpj, SiteUrlCanonica, PoliticaTrocaDevolucao,
+                GoogleAnalyticsId, MetaPixelId, BackupEmailAtivo, BackupEmailDestino, AtualizadoEm)
             VALUES (
                 1, $NomeCriadorSite, $PoliticaPrivacidade, $FreteValorPadrao,
                 $FreteGratisAcimaDe, $PrazoMinimoDias, $PrazoMaximoDias,
@@ -3606,7 +3711,9 @@ public sealed class LojaService
                 $BackupAutomaticoAtivo, $BackupIntervaloHoras, $BackupUltimoEm,
                 $GatewayPagamentoProvedor, $GatewayPagamentoAtivo, $GatewayPagamentoProducao,
                 $GatewayPagamentoPublicKey, $GatewayPagamentoAccessToken,
-                $GatewayPagamentoWebhookSecret, $GatewayPagamentoWebhookUrl, $AtualizadoEm);
+                $GatewayPagamentoWebhookSecret, $GatewayPagamentoWebhookUrl,
+                $RazaoSocial, $Cnpj, $SiteUrlCanonica, $PoliticaTrocaDevolucao,
+                $GoogleAnalyticsId, $MetaPixelId, $BackupEmailAtivo, $BackupEmailDestino, $AtualizadoEm);
             """);
         Add(command, "$NomeCriadorSite", _configuracaoLoja.NomeCriadorSite);
         Add(command, "$PoliticaPrivacidade", _configuracaoLoja.PoliticaPrivacidade);
@@ -3665,6 +3772,14 @@ public sealed class LojaService
         Add(command, "$GatewayPagamentoAccessToken", _configuracaoLoja.GatewayPagamentoAccessToken);
         Add(command, "$GatewayPagamentoWebhookSecret", _configuracaoLoja.GatewayPagamentoWebhookSecret);
         Add(command, "$GatewayPagamentoWebhookUrl", _configuracaoLoja.GatewayPagamentoWebhookUrl);
+        Add(command, "$RazaoSocial", _configuracaoLoja.RazaoSocial);
+        Add(command, "$Cnpj", _configuracaoLoja.Cnpj);
+        Add(command, "$SiteUrlCanonica", _configuracaoLoja.SiteUrlCanonica);
+        Add(command, "$PoliticaTrocaDevolucao", _configuracaoLoja.PoliticaTrocaDevolucao);
+        Add(command, "$GoogleAnalyticsId", _configuracaoLoja.GoogleAnalyticsId);
+        Add(command, "$MetaPixelId", _configuracaoLoja.MetaPixelId);
+        Add(command, "$BackupEmailAtivo", _configuracaoLoja.BackupEmailAtivo);
+        Add(command, "$BackupEmailDestino", _configuracaoLoja.BackupEmailDestino);
         Add(command, "$AtualizadoEm", _configuracaoLoja.AtualizadoEm);
         command.ExecuteNonQuery();
     }
@@ -4518,6 +4633,14 @@ public sealed class LojaService
             !string.IsNullOrWhiteSpace(_configuracaoLoja.GatewayPagamentoAccessToken),
             !string.IsNullOrWhiteSpace(_configuracaoLoja.GatewayPagamentoWebhookSecret),
             _configuracaoLoja.GatewayPagamentoWebhookUrl,
+            _configuracaoLoja.RazaoSocial,
+            _configuracaoLoja.Cnpj,
+            _configuracaoLoja.SiteUrlCanonica,
+            _configuracaoLoja.PoliticaTrocaDevolucao,
+            _configuracaoLoja.GoogleAnalyticsId,
+            _configuracaoLoja.MetaPixelId,
+            _configuracaoLoja.BackupEmailAtivo,
+            _configuracaoLoja.BackupEmailDestino,
             _configuracaoLoja.AtualizadoEm);
     }
 
@@ -4910,11 +5033,14 @@ public sealed class LojaService
         _opcoesEntrega[entregaLocal.Id] = entregaLocal;
     }
 
+    // Senhas padrão só valem pra uma instalação nova (banco vazio). Como o repositório é
+    // público, qualquer senha fixa aqui deve ser tratada como já vazada — troque todas as
+    // três pelo painel assim que fizer login pela primeira vez em cada ambiente.
     private void CriarUsuariosPainelPadrao()
     {
-        AdicionarUsuarioPainelPadrao("admin", "Nana@2026", "Admin", "Administrador");
-        AdicionarUsuarioPainelPadrao("caixa", "Caixa@2026", "Caixa", "Caixa");
-        AdicionarUsuarioPainelPadrao("estoque", "Estoque@2026", "Estoque", "Estoque");
+        AdicionarUsuarioPainelPadrao("admin", "lajTsbNJKY", "Admin", "Administrador");
+        AdicionarUsuarioPainelPadrao("caixa", "FpEoMnyfsg", "Caixa", "Caixa");
+        AdicionarUsuarioPainelPadrao("estoque", "oeYeWfodUl", "Estoque", "Estoque");
     }
 
     private void AdicionarUsuarioPainelPadrao(string usuario, string senha, string perfil, string nome)

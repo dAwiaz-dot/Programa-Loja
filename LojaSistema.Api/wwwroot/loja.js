@@ -66,7 +66,13 @@ const defaultStoreConfig = {
     gatewayPagamentoProvedor: "",
     gatewayPagamentoAtivo: false,
     gatewayPagamentoProducao: false,
-    gatewayPagamentoPublicKey: ""
+    gatewayPagamentoPublicKey: "",
+    razaoSocial: "",
+    cnpj: "",
+    siteUrlCanonica: "",
+    politicaTrocaDevolucao: "Você pode desistir da compra em até 7 dias corridos após o recebimento, sem precisar justificar o motivo, conforme o art. 49 do Código de Defesa do Consumidor.",
+    googleAnalyticsId: "",
+    metaPixelId: ""
 };
 
 const storeCurrency = new Intl.NumberFormat("pt-BR", {
@@ -188,6 +194,8 @@ function cacheStoreElements() {
     storeEls.customerOrders = document.querySelector("#customerOrders");
     storeEls.customerOrdersSummary = document.querySelector("#customerOrdersSummary");
     storeEls.privacyPolicyText = document.querySelector("#privacyPolicyText");
+    storeEls.exchangePolicyText = document.querySelector("#exchangePolicyText");
+    storeEls.footerLegal = document.querySelector("#footerLegal");
     storeEls.siteCreatorName = document.querySelector("#siteCreatorName");
     storeEls.toast = document.querySelector("#storeToast");
     storeEls.orderModal = document.querySelector("#orderModal");
@@ -567,6 +575,10 @@ function showStoreView(viewName, updateHash = true) {
         nextHash = "#privacidade";
     }
 
+    if (viewName === "exchanges") {
+        nextHash = "#trocas";
+    }
+
     if (viewName === "product" && storeState.selectedProductId) {
         nextHash = `#produto-${storeState.selectedProductId}`;
     }
@@ -707,6 +719,19 @@ function renderStoreConfig() {
     storeEls.customerLoginMessage.textContent = config.mensagemLoginCliente || defaultStoreConfig.mensagemLoginCliente;
     storeEls.siteCreatorName.textContent = config.nomeCriadorSite || defaultStoreConfig.nomeCriadorSite;
     storeEls.privacyPolicyText.innerHTML = formatStoreText(config.politicaPrivacidade || defaultStoreConfig.politicaPrivacidade);
+    storeEls.exchangePolicyText.innerHTML = formatStoreText(config.politicaTrocaDevolucao || defaultStoreConfig.politicaTrocaDevolucao);
+
+    const razaoSocial = (config.razaoSocial || "").trim();
+    const cnpj = (config.cnpj || "").trim();
+    if (razaoSocial || cnpj) {
+        storeEls.footerLegal.hidden = false;
+        storeEls.footerLegal.textContent = [razaoSocial, cnpj ? `CNPJ ${cnpj}` : ""].filter(Boolean).join(" · ");
+    } else {
+        storeEls.footerLegal.hidden = true;
+        storeEls.footerLegal.textContent = "";
+    }
+
+    aplicarAnalyticsStoreConfig(config);
 }
 
 function renderStoreCampaign(config) {
@@ -2690,6 +2715,10 @@ function getStoreRouteFromHash() {
         return { view: "privacy", productId: null };
     }
 
+    if (hash === "#trocas") {
+        return { view: "exchanges", productId: null };
+    }
+
     if (hash.startsWith("#produto-")) {
         return { view: "product", productId: hash.replace("#produto-", "") };
     }
@@ -2723,6 +2752,51 @@ function getStoreConfig() {
     return { ...defaultStoreConfig, ...(storeState.config || {}) };
 }
 
+// Só carrega os scripts de rastreamento se o painel tiver um ID configurado -
+// enquanto os campos estiverem vazios (padrão), nada é injetado na página.
+const storeAnalyticsState = { ga: false, meta: false };
+
+function aplicarAnalyticsStoreConfig(config) {
+    const googleAnalyticsId = String(config.googleAnalyticsId || "").trim();
+    if (googleAnalyticsId && !storeAnalyticsState.ga) {
+        storeAnalyticsState.ga = true;
+        const gtagScript = document.createElement("script");
+        gtagScript.async = true;
+        gtagScript.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(googleAnalyticsId)}`;
+        document.head.appendChild(gtagScript);
+
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function gtag() {
+            window.dataLayer.push(arguments);
+        };
+        window.gtag("js", new Date());
+        window.gtag("config", googleAnalyticsId);
+    }
+
+    const metaPixelId = String(config.metaPixelId || "").trim();
+    if (metaPixelId && !storeAnalyticsState.meta) {
+        storeAnalyticsState.meta = true;
+        (function (f, b, e, v, n, t, s) {
+            if (f.fbq) return;
+            n = f.fbq = function () {
+                n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n;
+            n.loaded = true;
+            n.version = "2.0";
+            n.queue = [];
+            t = b.createElement(e);
+            t.async = true;
+            t.src = v;
+            s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s);
+        })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
+        window.fbq("init", metaPixelId);
+        window.fbq("track", "PageView");
+    }
+}
+
 function formatStoreText(value) {
     const paragraphs = String(value || "")
         .split(/\n{2,}/)
@@ -2730,7 +2804,7 @@ function formatStoreText(value) {
         .filter(Boolean);
 
     if (!paragraphs.length) {
-        return "<p>Política de privacidade em atualização.</p>";
+        return "<p>Conteúdo em atualização.</p>";
     }
 
     return paragraphs

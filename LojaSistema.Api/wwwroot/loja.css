@@ -1906,6 +1906,18 @@ legend {
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
+    /* Sem isso, o grid do rodapé dimensiona essa coluna pelo max-content (largura
+       necessária pra caber todos os botões numa linha só) em vez de deixar o
+       flex-wrap quebrar linha - o que espreme a coluna da marca/descrição ao lado
+       e quebra o texto palavra por palavra. */
+    min-width: 0;
+}
+
+.footer-contact-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
 }
 
 .footer-links button {

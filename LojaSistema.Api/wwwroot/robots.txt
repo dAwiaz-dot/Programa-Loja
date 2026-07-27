@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /index.html
+Disallow: /app.js
+Disallow: /styles.css
+Disallow: /login.html
+Disallow: /login.js
+Disallow: /login.css
+Disallow: /admin
+Disallow: /painel
+Disallow: /pdv
+Disallow: /uploads/
+
+# Troque pelo domínio final da loja assim que ele estiver definido.
+Sitemap: https://SEU-DOMINIO-AQUI/sitemap.xml

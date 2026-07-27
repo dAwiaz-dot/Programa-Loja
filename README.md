@@ -31,12 +31,14 @@ Depois abra:
 
 ## Login inicial
 
-```text
-Usuário: admin
-Senha: Nana@2026
-```
+O usuário padrão é `admin` (e também existem `caixa` e `estoque`). A senha inicial de
+cada um está definida em `CriarUsuariosPainelPadrao` (`LojaSistema.Api/Services/LojaService.cs`)
+e só é usada na primeira vez que o sistema roda com um banco vazio.
 
-Troque essa senha antes de publicar.
+**Troque as três senhas pelo painel assim que fizer o primeiro login, em cada ambiente
+(local, produção etc).** Como este é um repositório público, qualquer senha padrão
+commitada aqui deve ser considerada pública — não é suficiente trocar só depois de
+publicar, ela já nasce comprometida.
 
 ## Arquivos importantes
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A loja é uma SPA (tudo renderizado via loja.js dentro de uma única página).
+  Por isso, hoje só existe uma URL real pro Google indexar: a home.
+  As páginas de produto/categoria usam #hash e não são rotas de servidor,
+  então não entram no sitemap - o Google não indexa cada produto separadamente
+  enquanto a arquitetura for essa.
+  Troque "SEU-DOMINIO-AQUI" pelo domínio final assim que ele estiver definido.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://SEU-DOMINIO-AQUI/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

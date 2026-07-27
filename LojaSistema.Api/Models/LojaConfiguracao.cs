@@ -3,7 +3,15 @@ namespace LojaSistema.Api.Models;
 public sealed class LojaConfiguracao
 {
     public string NomeCriadorSite { get; set; } = "Davi Silva Dias";
-    public string PoliticaPrivacidade { get; set; } = "A Nana Modas utiliza os dados informados no checkout apenas para identificar o cliente, confirmar o pedido, combinar a entrega e prestar atendimento. As informações não são vendidas ou compartilhadas para fins comerciais sem autorização.";
+    public string RazaoSocial { get; set; } = "";
+    public string Cnpj { get; set; } = "";
+    public string SiteUrlCanonica { get; set; } = "";
+    public string PoliticaPrivacidade { get; set; } = "A Nana Modas coleta, no checkout e na criação de conta, os dados necessários para identificar o cliente, confirmar o pedido, calcular frete, combinar a entrega e prestar atendimento (nome, e-mail, telefone, CPF/CNPJ e endereço). Esses dados não são vendidos nem compartilhados com terceiros para fins comerciais. São usados apenas pela Nana Modas e pelos serviços que processam o pedido (pagamento e entrega). Você pode solicitar a qualquer momento a confirmação, correção ou exclusão dos seus dados pelos canais de atendimento da loja, conforme a Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018).";
+    public string PoliticaTrocaDevolucao { get; set; } = "Você pode desistir da compra em até 7 dias corridos após o recebimento, sem precisar justificar o motivo, conforme o art. 49 do Código de Defesa do Consumidor. Nesse caso, o valor pago é reembolsado integralmente, incluindo o frete. Para trocas por tamanho/cor ou devolução por defeito, entre em contato pelos canais de atendimento da loja informando o número do pedido; o produto deve estar sem uso, com etiqueta e embalagem originais.";
+    public string GoogleAnalyticsId { get; set; } = "";
+    public string MetaPixelId { get; set; } = "";
+    public bool BackupEmailAtivo { get; set; }
+    public string BackupEmailDestino { get; set; } = "";
     public decimal FreteValorPadrao { get; set; } = 19.90m;
     public decimal FreteGratisAcimaDe { get; set; } = 399m;
     public int PrazoMinimoDias { get; set; } = 3;
