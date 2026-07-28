@@ -65,7 +65,7 @@ a:focus-visible {
     color: #050505;
     padding: 10px 20px;
     text-align: center;
-    font-family: Arial, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
     font-size: 14px;
     font-weight: 700;
     line-height: 1.4;
@@ -118,7 +118,7 @@ a:focus-visible {
 .store-brand strong {
     margin-top: 6px;
     color: var(--gold-strong);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 24px;
     line-height: 1;
     text-transform: uppercase;
@@ -243,18 +243,22 @@ p {
 h1 {
     margin-bottom: 14px;
     color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 88px;
+    font-weight: 700;
     line-height: 0.92;
+    letter-spacing: -0.01em;
     text-transform: uppercase;
 }
 
 h2 {
     margin-bottom: 0;
     color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 44px;
+    font-weight: 700;
     line-height: 1.02;
+    letter-spacing: -0.005em;
 }
 
 .hero-copy p:not(.store-eyebrow) {
@@ -390,7 +394,7 @@ h2 {
 
 .home-confidence strong {
     color: var(--ivory);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 25px;
     line-height: 1.05;
 }
@@ -503,7 +507,7 @@ h2 {
 }
 
 .home-category-card span {
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 26px;
     line-height: 1;
 }
@@ -543,7 +547,7 @@ h2 {
 
 .home-assurance strong {
     color: var(--ivory);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 26px;
     line-height: 1.05;
 }
@@ -768,7 +772,7 @@ textarea {
         linear-gradient(145deg, rgba(241, 213, 138, 0.18), rgba(255, 255, 255, 0.03)),
         #0d0d0d;
     color: var(--gold-strong);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 42px;
     font-weight: 950;
 }
@@ -1293,7 +1297,7 @@ legend {
     border-radius: 8px;
     background: #0d0d0d;
     color: var(--gold-strong);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 48px;
     font-weight: 950;
 }
@@ -1483,7 +1487,7 @@ legend {
 .related-products h3 {
     margin: 0 0 10px;
     color: var(--gold-strong);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 22px;
 }
 
@@ -1664,7 +1668,7 @@ legend {
 .orders-empty h3 {
     margin: 0;
     color: var(--ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 30px;
 }
 
@@ -1880,7 +1884,7 @@ legend {
 .footer-brand {
     display: block;
     color: var(--gold-strong);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 24px;
     font-weight: 950;
     text-decoration: none;
@@ -1958,6 +1962,18 @@ legend {
 .footer-contact span {
     max-width: 280px;
     text-align: center;
+}
+
+.footer-admin-link {
+    font-size: 12px;
+    color: var(--muted);
+    text-decoration: none;
+    opacity: 0.7;
+}
+
+.footer-admin-link:hover {
+    color: var(--gold-strong);
+    opacity: 1;
 }
 
 .order-modal {
@@ -2214,7 +2230,7 @@ legend {
 
 .campaign-placeholder span,
 .visual-placeholder span {
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: clamp(28px, 5vw, 62px);
     font-weight: 950;
     text-transform: uppercase;
@@ -2252,7 +2268,7 @@ legend {
     left: 16px;
     bottom: 16px;
     color: var(--ivory);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
     font-size: 28px;
     text-shadow: 0 12px 30px rgba(0, 0, 0, 0.8);
 }

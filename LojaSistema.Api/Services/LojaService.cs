@@ -1702,6 +1702,12 @@ public sealed class LojaService
 
             var entrega = resultadoEntrega.Valor!;
 
+            var exigeEndereco = !string.Equals(entrega.Tipo, "Retirada", StringComparison.OrdinalIgnoreCase);
+            if (exigeEndereco && !EnderecoPedidoInformado(request))
+            {
+                return Resultado<PedidoOnline>.Falha("Informe o endereco de entrega.");
+            }
+
             var pedido = new PedidoOnline
             {
                 NomeCliente = NormalizarTexto(request.NomeCliente),
@@ -4052,11 +4058,6 @@ public sealed class LojaService
             return "Informe um e-mail valido.";
         }
 
-        if (!EnderecoPedidoInformado(request))
-        {
-            return "Informe o endereco de entrega.";
-        }
-
         return null;
     }
 
@@ -4165,27 +4166,27 @@ public sealed class LojaService
         return null;
     }
 
-    private Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias)> CalcularEntregaPedido(RegistrarPedidoOnlineRequest request, decimal totalProdutos)
+    private Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias, string? Tipo)> CalcularEntregaPedido(RegistrarPedidoOnlineRequest request, decimal totalProdutos)
     {
         if (!request.OpcaoEntregaId.HasValue)
         {
-            return Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias)>.Ok(
-                (null, "Entrega a combinar", 0, null, null));
+            return Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias, string? Tipo)>.Ok(
+                (null, "Entrega a combinar", 0, null, null, null));
         }
 
         if (!_opcoesEntrega.TryGetValue(request.OpcaoEntregaId.Value, out var opcao) || !opcao.Ativo)
         {
-            return Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias)>.Falha("Opcao de entrega indisponivel.");
+            return Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias, string? Tipo)>.Falha("Opcao de entrega indisponivel.");
         }
 
         if (!OpcaoEntregaAtendeEndereco(opcao, request))
         {
-            return Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias)>.Falha("Essa opcao de entrega nao atende o endereco informado.");
+            return Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias, string? Tipo)>.Falha("Essa opcao de entrega nao atende o endereco informado.");
         }
 
         var valor = CalcularValorEntrega(opcao, totalProdutos);
-        return Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias)>.Ok(
-            (opcao.Id, opcao.Nome, valor, opcao.PrazoMinimoDias, opcao.PrazoMaximoDias));
+        return Resultado<(Guid? OpcaoEntregaId, string Nome, decimal Valor, int? PrazoMinimoDias, int? PrazoMaximoDias, string? Tipo)>.Ok(
+            (opcao.Id, opcao.Nome, valor, opcao.PrazoMinimoDias, opcao.PrazoMaximoDias, opcao.Tipo));
     }
 
     private static decimal CalcularValorEntrega(OpcaoEntrega opcao, decimal totalProdutos)

@@ -901,6 +901,25 @@ function renderStoreShipping() {
     storeEls.checkoutShipping.textContent = selected
         ? `${formatStoreShippingValue(selected.valor)} · ${selected.nome}`
         : "Escolha uma entrega";
+    updateStoreAddressRequirement(selected);
+}
+
+// Retirada na loja não precisa de endereço — sem isso, o navegador bloqueia o
+// envio do formulário (campos "required") mesmo quando o backend já aceita o
+// pedido sem endereço para esse tipo de entrega.
+function updateStoreAddressRequirement(selected) {
+    const isPickup = selected?.tipo === "Retirada";
+    [
+        storeEls.customerStreet,
+        storeEls.customerNumber,
+        storeEls.customerDistrict,
+        storeEls.customerCity,
+        storeEls.customerState
+    ].forEach((field) => {
+        if (field) {
+            field.required = !isPickup;
+        }
+    });
 }
 
 function renderStoreDeliveryCard(option, selectedId, totalProducts, selectable) {
