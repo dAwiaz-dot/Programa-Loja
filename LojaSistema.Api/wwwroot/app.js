@@ -735,6 +735,64 @@ function bindEvents() {
     });
 }
 
+// Um loader por fatia de estado. refreshAll() usa todos (carga inicial e botão
+// "Atualizar"); refreshScoped() usa só os relevantes pra cada ação, pra não
+// buscar e redesenhar o painel inteiro a cada salvamento.
+const stateLoaders = {
+    categories: async () => { state.categories = can("readProducts") ? await api("/categorias") : []; },
+    products: async () => { state.products = can("readProducts") ? await api("/produtos?apenasAtivos=false") : []; },
+    suppliers: async () => { state.suppliers = can("manageStock") ? await api("/fornecedores") : []; },
+    movements: async () => { state.movements = can("manageStock") ? await api("/estoque/movimentacoes") : []; },
+    sales: async () => { state.sales = can("usePdv") ? await api("/pdv/vendas") : []; },
+    orders: async () => { state.orders = can("viewOnlineOrders") ? await api("/pedidos-online") : []; },
+    customers: async () => { state.customers = can("viewCustomers") ? await api("/clientes-painel") : []; },
+    summary: async () => { state.summary = can("viewReports") ? await api("/relatorios/resumo") : null; },
+    siteConfig: async () => { state.siteConfig = can("manageStorefront") ? await api("/loja-configuracao") : null; },
+    coupons: async () => { state.coupons = can("manageStorefront") ? await api("/cupons") : []; },
+    deliveryOptions: async () => { state.deliveryOptions = can("manageStorefront") ? await api("/opcoes-entrega") : []; },
+    panelUsers: async () => { state.panelUsers = can("manageUsers") ? await api("/usuarios-painel") : []; },
+    activities: async () => { state.activities = can("manageUsers") ? await api("/atividades-painel") : []; },
+    backups: async () => { state.backups = can("viewReports") ? await api("/backup/arquivos") : []; }
+};
+
+// Quais telas dependem de cada fatia de estado, pra redesenhar só o necessário.
+// renderDashboard sempre roda (é redesenho de DOM local, não pesa) — garante
+// que os cartões/atalhos do painel principal nunca fiquem desatualizados.
+const scopeRenderers = {
+    categories: [
+        ["", renderCategoryOptions],
+        ["manageProducts", renderCategories],
+        ["manageProducts", renderProductsTable]
+    ],
+    products: [
+        ["", renderCategoryOptions],
+        ["manageProducts", renderProductsTable],
+        ["manageStorefront", renderStorefront],
+        ["usePdv", renderPdvProducts],
+        ["usePdv", renderCart],
+        ["manageStock", renderStock],
+        ["viewReports", renderReports]
+    ],
+    suppliers: [["manageStock", renderStock]],
+    movements: [["manageStock", renderStock]],
+    sales: [
+        ["viewReports", renderReports],
+        ["usePdv", renderCart]
+    ],
+    orders: [
+        ["viewOnlineOrders", renderOnlineOrders],
+        ["viewReports", renderReports]
+    ],
+    customers: [["viewCustomers", renderCustomers]],
+    summary: [["viewReports", renderReports]],
+    siteConfig: [["manageStorefront", renderSiteConfig]],
+    coupons: [["manageStorefront", renderCoupons]],
+    deliveryOptions: [["manageStorefront", renderDeliveryOptions]],
+    panelUsers: [["manageUsers", renderPanelUsers]],
+    activities: [],
+    backups: [["viewReports", renderReports]]
+};
+
 async function refreshAll() {
     setStatus("Carregando", "loading");
 
@@ -742,40 +800,43 @@ async function refreshAll() {
         state.currentUser = await api("/auth/status");
         applyRoleUi();
 
-        const [categories, products, suppliers, movements, sales, orders, customers, summary, siteConfig, coupons, deliveryOptions, panelUsers, activities, backups] = await Promise.all([
-            can("readProducts") ? api("/categorias") : Promise.resolve([]),
-            can("readProducts") ? api("/produtos?apenasAtivos=false") : Promise.resolve([]),
-            can("manageStock") ? api("/fornecedores") : Promise.resolve([]),
-            can("manageStock") ? api("/estoque/movimentacoes") : Promise.resolve([]),
-            can("usePdv") ? api("/pdv/vendas") : Promise.resolve([]),
-            can("viewOnlineOrders") ? api("/pedidos-online") : Promise.resolve([]),
-            can("viewCustomers") ? api("/clientes-painel") : Promise.resolve([]),
-            can("viewReports") ? api("/relatorios/resumo") : Promise.resolve(null),
-            can("manageStorefront") ? api("/loja-configuracao") : Promise.resolve(null),
-            can("manageStorefront") ? api("/cupons") : Promise.resolve([]),
-            can("manageStorefront") ? api("/opcoes-entrega") : Promise.resolve([]),
-            can("manageUsers") ? api("/usuarios-painel") : Promise.resolve([]),
-            can("manageUsers") ? api("/atividades-painel") : Promise.resolve([]),
-            can("viewReports") ? api("/backup/arquivos") : Promise.resolve([])
-        ]);
-
-        state.categories = categories;
-        state.products = products;
-        state.suppliers = suppliers;
-        state.movements = movements;
-        state.sales = sales;
-        state.orders = orders;
-        state.customers = customers;
-        state.summary = summary;
-        state.siteConfig = siteConfig;
-        state.coupons = coupons;
-        state.deliveryOptions = deliveryOptions;
-        state.panelUsers = panelUsers;
-        state.activities = activities;
-        state.backups = backups;
+        await Promise.all(Object.values(stateLoaders).map((load) => load()));
 
         syncCartWithStock();
         renderAll();
+        setStatus("Online", "online");
+    } catch (error) {
+        setStatus("Offline", "offline");
+        showToast(error.message || "Não foi possível carregar os dados.");
+    }
+}
+
+// Recarrega só as fatias de estado passadas em `scopes` (chaves de stateLoaders)
+// e redesenha só as telas que dependem delas, em vez de tudo. Usado depois de
+// ações pontuais (salvar produto, registrar venda, mudar status de pedido...).
+async function refreshScoped(scopes) {
+    setStatus("Carregando", "loading");
+
+    try {
+        await Promise.all(scopes.map((scope) => stateLoaders[scope]()));
+
+        if (scopes.includes("products") || scopes.includes("movements")) {
+            syncCartWithStock();
+        }
+
+        const toRender = new Map();
+        for (const scope of scopes) {
+            for (const [permission, renderFn] of scopeRenderers[scope] || []) {
+                if (!permission || can(permission)) {
+                    toRender.set(renderFn, true);
+                }
+            }
+        }
+        for (const renderFn of toRender.keys()) {
+            renderFn();
+        }
+        renderDashboard();
+
         setStatus("Online", "online");
     } catch (error) {
         setStatus("Offline", "offline");
@@ -2630,7 +2691,7 @@ async function saveProduct(event) {
         }
 
         resetProductForm();
-        await refreshAll();
+        await refreshScoped(["products"]);
     } catch (error) {
         showToast(error.message);
     }
@@ -2682,7 +2743,7 @@ async function saveStorefrontProduct(event) {
         els.storefrontImageFile.value = "";
         els.storefrontExtraImageFiles.value = "";
         showToast("Vitrine do site atualizada.");
-        await refreshAll();
+        await refreshScoped(["products"]);
 
         const updatedProduct = state.products.find((product) => product.id === productId);
         if (updatedProduct) {
@@ -2862,7 +2923,7 @@ async function saveDeliveryOption(event) {
         }
 
         resetDeliveryOptionForm();
-        await refreshAll();
+        await refreshScoped(["deliveryOptions"]);
     } catch (error) {
         showToast(error.message);
     }
@@ -2897,7 +2958,7 @@ async function saveCoupon(event) {
         }
 
         resetCouponForm();
-        await refreshAll();
+        await refreshScoped(["coupons"]);
     } catch (error) {
         showToast(error.message);
     }
@@ -2936,7 +2997,7 @@ async function savePanelUser(event) {
         }
 
         resetPanelUserForm();
-        await refreshAll();
+        await refreshScoped(["panelUsers"]);
     } catch (error) {
         showToast(error.message);
     }
@@ -2952,7 +3013,7 @@ async function saveCategory(event) {
         });
         els.categoryName.value = "";
         showToast("Categoria adicionada.");
-        await refreshAll();
+        await refreshScoped(["categories", "products"]);
     } catch (error) {
         showToast(error.message);
     }
@@ -2974,7 +3035,7 @@ async function saveSupplier(event) {
 
         els.supplierForm.reset();
         showToast("Fornecedor cadastrado.");
-        await refreshAll();
+        await refreshScoped(["suppliers"]);
     } catch (error) {
         showToast(error.message);
     }
@@ -3005,7 +3066,7 @@ async function saveStockEntry(event) {
         els.stockDocument.value = "";
         els.stockNote.value = "";
         showToast("Entrada de estoque registrada.");
-        await refreshAll();
+        await refreshScoped(["products", "movements"]);
     } catch (error) {
         showToast(error.message);
     }
@@ -3056,7 +3117,7 @@ async function finishSale() {
         els.saleReceived.value = "";
         els.saleNote.value = "";
         showToast("Venda finalizada e estoque atualizado.");
-        await refreshAll();
+        await refreshScoped(["products", "movements", "sales", "summary"]);
         renderReceipt(sale);
     } catch (error) {
         showToast(error.message);
@@ -3168,7 +3229,7 @@ async function submitReturnSale(event) {
             state.cart = [];
             showToast("Troca registrada e estoque atualizado.");
             closeReturnDialog();
-            await refreshAll();
+            await refreshScoped(["products", "movements", "sales", "summary"]);
             renderReceipt(response.vendaTroca);
             showView("pdv");
             return;
@@ -3184,7 +3245,7 @@ async function submitReturnSale(event) {
 
         showToast("Venda devolvida e estoque atualizado.");
         closeReturnDialog();
-        await refreshAll();
+        await refreshScoped(["products", "movements", "sales", "summary"]);
     } catch (error) {
         showToast(error.message || "Não foi possível devolver a venda.");
     }
@@ -4106,7 +4167,7 @@ async function updateOrderStatus(orderId, status, select = null) {
             body: JSON.stringify({ status })
         });
 
-        await refreshAll();
+        await refreshScoped(["orders", "summary"]);
         showToast("Status do pedido atualizado.");
     } catch (error) {
         if (previousStatus) {
@@ -4171,7 +4232,7 @@ async function saveOnlineOrderTracking(orderId) {
         });
 
         showToast("Rastreamento salvo.");
-        await refreshAll();
+        await refreshScoped(["orders"]);
     } catch (error) {
         showToast(error.message || "Não foi possível salvar o rastreamento.");
     }
@@ -4196,7 +4257,7 @@ async function saveOnlineOrderPayment(orderId) {
         });
 
         showToast(confirmInput.checked ? "Pagamento confirmado." : "Dados de pagamento salvos.");
-        await refreshAll();
+        await refreshScoped(["orders", "summary"]);
     } catch (error) {
         showToast(error.message || "Não foi possível salvar o pagamento.");
     }
