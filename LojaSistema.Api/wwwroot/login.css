@@ -85,6 +85,8 @@ input {
 
 .login-copy h1 {
     margin: 0 0 22px;
+    font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+    font-weight: 600;
     font-size: 32px;
     line-height: 1.1;
 }
