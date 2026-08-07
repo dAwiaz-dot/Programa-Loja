@@ -402,9 +402,10 @@ h2 {
 
 .dashboard-more summary {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 4px 12px;
     min-height: 56px;
     cursor: pointer;
     list-style: none;
@@ -430,7 +431,9 @@ h2 {
 
 .dashboard-more summary .panel-note {
     flex: 1;
+    min-width: 0;
     text-align: left;
+    white-space: normal;
 }
 
 .dashboard-more .dashboard-grid {
@@ -500,7 +503,6 @@ h2 {
 .panel-note {
     color: var(--muted);
     font-size: 13px;
-    white-space: nowrap;
 }
 
 .compact-list,
