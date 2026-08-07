@@ -1962,6 +1962,8 @@ legend {
 .footer-contact span {
     max-width: 280px;
     text-align: center;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
 }
 
 .footer-admin-link {

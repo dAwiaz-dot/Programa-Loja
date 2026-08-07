@@ -41,8 +41,12 @@ const orderStatusOptions = ["Recebido", "Pago", "Separando", "Enviado", "Entregu
 const viewTitles = {
     dashboard: "Visão geral",
     products: "Produtos",
-    storefront: "Site da loja",
-    siteImages: "Imagens do site",
+    storefront: "Vitrine",
+    siteImages: "Banner e imagens",
+    paymentSettings: "Pagamento",
+    shippingSettings: "Frete e entrega",
+    emailSettings: "E-mail e backup",
+    legalSettings: "Legal e domínio",
     siteContact: "Contato do site",
     pdv: "PDV",
     stock: "Estoque",
@@ -55,7 +59,7 @@ const viewTitles = {
 const roleConfigs = {
     Admin: {
         label: "Administrador",
-        views: ["dashboard", "products", "storefront", "siteImages", "siteContact", "pdv", "stock", "onlineOrders", "customers", "reports", "users"],
+        views: ["dashboard", "products", "storefront", "siteImages", "paymentSettings", "shippingSettings", "emailSettings", "legalSettings", "siteContact", "pdv", "stock", "onlineOrders", "customers", "reports", "users"],
         permissions: ["readProducts", "manageProducts", "manageStorefront", "usePdv", "manageStock", "viewOnlineOrders", "viewCustomers", "viewReports", "manageUsers"]
     },
     Caixa: {
@@ -159,7 +163,13 @@ function cacheElements() {
     els.storefrontSearch = document.querySelector("#storefrontSearch");
     els.storefrontProductList = document.querySelector("#storefrontProductList");
     els.storefrontCount = document.querySelector("#storefrontCount");
-    els.siteConfigForm = document.querySelector("#siteConfigForm");
+    els.paymentSettingsForm = document.querySelector("#paymentSettingsForm");
+    els.paymentGatewayForm = document.querySelector("#paymentGatewayForm");
+    els.shippingConfigForm = document.querySelector("#shippingConfigForm");
+    els.emailSettingsForm = document.querySelector("#emailSettingsForm");
+    els.backupSettingsForm = document.querySelector("#backupSettingsForm");
+    els.legalSettingsForm = document.querySelector("#legalSettingsForm");
+    els.domainSettingsForm = document.querySelector("#domainSettingsForm");
     els.siteCreatorNameInput = document.querySelector("#siteCreatorNameInput");
     els.shippingBasePrice = document.querySelector("#shippingBasePrice");
     els.shippingFreeThreshold = document.querySelector("#shippingFreeThreshold");
@@ -408,7 +418,13 @@ function bindEvents() {
         }
     });
     els.storefrontExtraImageFiles.addEventListener("change", previewSelectedStorefrontExtraImages);
-    els.siteConfigForm.addEventListener("submit", saveSiteConfig);
+    els.paymentSettingsForm.addEventListener("submit", saveSiteConfig);
+    els.paymentGatewayForm.addEventListener("submit", saveSiteConfig);
+    els.shippingConfigForm.addEventListener("submit", saveSiteConfig);
+    els.emailSettingsForm.addEventListener("submit", saveSiteConfig);
+    els.backupSettingsForm.addEventListener("submit", saveSiteConfig);
+    els.legalSettingsForm.addEventListener("submit", saveSiteConfig);
+    els.domainSettingsForm.addEventListener("submit", saveSiteConfig);
     els.siteImagesForm.addEventListener("submit", saveSiteImagesConfig);
     els.siteContactForm.addEventListener("submit", saveSiteContactConfig);
     bindSiteImagePreview(els.bannerImageInput, els.bannerImageFile, els.bannerImagePreview, "Nenhum banner principal selecionado");

@@ -32,8 +32,12 @@
                 <button class="nav-link" type="button" data-view-target="stock">Estoque</button>
                 <button class="nav-link" type="button" data-view-target="onlineOrders">Pedidos online</button>
                 <span class="nav-section-label">Loja online</span>
-                <button class="nav-link" type="button" data-view-target="storefront">Site da loja</button>
-                <button class="nav-link" type="button" data-view-target="siteImages">Imagens do site</button>
+                <button class="nav-link" type="button" data-view-target="storefront">Vitrine</button>
+                <button class="nav-link" type="button" data-view-target="siteImages">Banner e imagens</button>
+                <button class="nav-link" type="button" data-view-target="paymentSettings">Pagamento</button>
+                <button class="nav-link" type="button" data-view-target="shippingSettings">Frete e entrega</button>
+                <button class="nav-link" type="button" data-view-target="emailSettings">E-mail e backup</button>
+                <button class="nav-link" type="button" data-view-target="legalSettings">Legal e domínio</button>
                 <button class="nav-link" type="button" data-view-target="siteContact">Contato do site</button>
                 <span class="nav-section-label">Gestão</span>
                 <button class="nav-link" type="button" data-view-target="customers">Clientes</button>
@@ -416,361 +420,175 @@
                         </form>
                     </section>
                 </div>
+            </section>
+
+            <section class="view" data-view="paymentSettings">
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Pagamento — Pix e cartão</h2>
+                            <span class="panel-note">Chave, recebedor e mensagens de cobrança</span>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="paymentSettingsForm">
+                        <label class="form-span">
+                            Chave Pix da loja
+                            <input id="pixKeyInput" type="text" autocomplete="off" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+                        </label>
+
+                        <label>
+                            Nome no Pix
+                            <input id="pixReceiverNameInput" type="text" autocomplete="off" maxlength="25" placeholder="NANA MODAS">
+                        </label>
+
+                        <label>
+                            Cidade no Pix
+                            <input id="pixCityInput" type="text" autocomplete="off" maxlength="15" placeholder="SAO PAULO">
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="pixOnlineActiveInput" type="checkbox" checked>
+                            Pix ativo no site
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="cardOnlineActiveInput" type="checkbox" checked>
+                            Cartão ativo no site
+                        </label>
+
+                        <label>
+                            Nome do checkout cartão
+                            <input id="cardCheckoutNameInput" type="text" autocomplete="off" placeholder="Mercado Pago, InfinitePay, PagSeguro">
+                        </label>
+
+                        <label>
+                            Link de pagamento cartão
+                            <input id="cardCheckoutUrlInput" type="url" autocomplete="off" placeholder="https://...">
+                        </label>
+
+                        <label class="form-span">
+                            Mensagem do Pix
+                            <textarea id="paymentMessageInput" rows="3" placeholder="Ex: envie o comprovante pelo WhatsApp para confirmarmos seu pedido."></textarea>
+                        </label>
+
+                        <label class="form-span">
+                            Mensagem do cartão
+                            <textarea id="cardPaymentMessageInput" rows="3" placeholder="Ex: pague pelo link ou aguarde a loja enviar a cobrança."></textarea>
+                        </label>
+
+                        <button class="button button-primary form-action" type="submit">Salvar pagamento</button>
+                    </form>
+                </section>
 
                 <section class="panel">
                     <div class="panel-header">
                         <div>
-                            <h2>Configurações do site</h2>
-                            <span class="panel-note">Rodapé, privacidade, cliente e frete</span>
+                            <h2>Gateway de pagamento (Asaas etc.)</h2>
+                            <span class="panel-note">Só necessário pra Pix automático via QR Code</span>
                         </div>
                     </div>
 
-                    <form id="siteConfigForm">
-                        <p class="settings-hint">Tudo aqui salva junto, num clique só — mas cada bloco só mostra os campos daquele assunto. Se "Enviar e-mails automáticos" estiver marcado sem uma chave configurada, nenhum bloco salva; deixe desmarcado até configurar o e-mail.</p>
+                    <form class="form-grid" id="paymentGatewayForm">
+                        <label>
+                            Provedor de pagamento
+                            <select id="paymentGatewayProviderInput">
+                                <option value="">Sem gateway real</option>
+                                <option value="Asaas">Asaas</option>
+                                <option value="MercadoPago">Mercado Pago</option>
+                                <option value="PagSeguro">PagSeguro</option>
+                                <option value="Stripe">Stripe</option>
+                                <option value="InfinitePay">InfinitePay</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </label>
 
-                        <details class="settings-group" open>
-                            <summary>
-                                <span>Banner da home</span>
-                                <span class="panel-note">Chamada, título e botões da vitrine principal</span>
-                            </summary>
-                            <div class="form-grid">
-                                <label>
-                                    Chamada do banner
-                                    <input id="bannerEyebrowInput" type="text" autocomplete="off" placeholder="Coleção pronta entrega">
-                                </label>
+                        <label class="checkbox-line">
+                            <input id="paymentGatewayActiveInput" type="checkbox">
+                            Gateway ativo
+                        </label>
 
-                                <label>
-                                    Título do banner
-                                    <input id="bannerTitleInput" type="text" autocomplete="off" placeholder="Nana Modas">
-                                </label>
+                        <label class="checkbox-line">
+                            <input id="paymentGatewayProductionInput" type="checkbox">
+                            Modo produção
+                        </label>
 
-                                <label class="form-span">
-                                    Descrição do banner
-                                    <textarea id="bannerDescriptionInput" rows="3"></textarea>
-                                </label>
+                        <label>
+                            Public key
+                            <input id="paymentGatewayPublicKeyInput" type="text" autocomplete="off">
+                        </label>
 
-                                <label>
-                                    Botão principal
-                                    <input id="bannerPrimaryButtonInput" type="text" autocomplete="off" placeholder="Ver coleção">
-                                </label>
+                        <label>
+                            Access token
+                            <input id="paymentGatewayAccessTokenInput" type="password" autocomplete="new-password" placeholder="Deixe em branco para manter">
+                        </label>
 
-                                <label>
-                                    Botão secundário
-                                    <input id="bannerSecondaryButtonInput" type="text" autocomplete="off" placeholder="Minha sacola">
-                                </label>
-                            </div>
-                        </details>
+                        <label>
+                            Webhook secret
+                            <input id="paymentGatewayWebhookSecretInput" type="password" autocomplete="new-password" placeholder="Deixe em branco para manter">
+                        </label>
 
-                        <details class="settings-group" open>
-                            <summary>
-                                <span>Frete e prazos</span>
-                                <span class="panel-note">Valores padrão e textos exibidos no checkout</span>
-                            </summary>
-                            <div class="form-grid">
-                                <label>
-                                    Criador do site
-                                    <input id="siteCreatorNameInput" type="text" autocomplete="off" required>
-                                </label>
+                        <label class="form-span">
+                            URL de webhook
+                            <input id="paymentGatewayWebhookUrlInput" type="url" autocomplete="off" placeholder="https://seudominio.com/pagamentos/asaas/webhook">
+                        </label>
 
-                                <label>
-                                    Frete padrão
-                                    <input id="shippingBasePrice" type="number" min="0" step="0.01" required>
-                                </label>
+                        <div class="config-note form-span">
+                            <strong>Pagamento real com Asaas</strong>
+                            <span>Para ativar QR Code Pix automático, selecione Asaas, cole o access token, defina um segredo de webhook e use a URL acima no painel do Asaas. Em produção, marque modo produção somente depois de testar uma compra pequena.</span>
+                        </div>
 
-                                <label>
-                                    Frete grátis acima de
-                                    <input id="shippingFreeThreshold" type="number" min="0" step="0.01" required>
-                                </label>
+                        <button class="button button-primary form-action" type="submit">Salvar gateway</button>
+                    </form>
+                </section>
+            </section>
 
-                                <label>
-                                    Prazo mínimo em dias
-                                    <input id="shippingMinDays" type="number" min="0" step="1" required>
-                                </label>
+            <section class="view" data-view="shippingSettings">
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Frete e prazos</h2>
+                            <span class="panel-note">Valores padrão e textos exibidos no checkout</span>
+                        </div>
+                    </div>
 
-                                <label>
-                                    Prazo máximo em dias
-                                    <input id="shippingMaxDays" type="number" min="0" step="1" required>
-                                </label>
+                    <form class="form-grid" id="shippingConfigForm">
+                        <label>
+                            Criador do site
+                            <input id="siteCreatorNameInput" type="text" autocomplete="off" required>
+                        </label>
 
-                                <label class="form-span">
-                                    Texto da aba de frete
-                                    <textarea id="shippingMessageInput" rows="3"></textarea>
-                                </label>
+                        <label>
+                            Frete padrão
+                            <input id="shippingBasePrice" type="number" min="0" step="0.01" required>
+                        </label>
 
-                                <label class="form-span">
-                                    Texto da aba de cliente
-                                    <textarea id="customerLoginMessageInput" rows="3"></textarea>
-                                </label>
-                            </div>
-                        </details>
+                        <label>
+                            Frete grátis acima de
+                            <input id="shippingFreeThreshold" type="number" min="0" step="0.01" required>
+                        </label>
 
-                        <details class="settings-group" open>
-                            <summary>
-                                <span>Pagamento — Pix e cartão</span>
-                                <span class="panel-note">Chave, recebedor e mensagens de cobrança</span>
-                            </summary>
-                            <div class="form-grid">
-                                <label class="form-span">
-                                    Chave Pix da loja
-                                    <input id="pixKeyInput" type="text" autocomplete="off" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
-                                </label>
+                        <label>
+                            Prazo mínimo em dias
+                            <input id="shippingMinDays" type="number" min="0" step="1" required>
+                        </label>
 
-                                <label>
-                                    Nome no Pix
-                                    <input id="pixReceiverNameInput" type="text" autocomplete="off" maxlength="25" placeholder="NANA MODAS">
-                                </label>
+                        <label>
+                            Prazo máximo em dias
+                            <input id="shippingMaxDays" type="number" min="0" step="1" required>
+                        </label>
 
-                                <label>
-                                    Cidade no Pix
-                                    <input id="pixCityInput" type="text" autocomplete="off" maxlength="15" placeholder="SAO PAULO">
-                                </label>
+                        <label class="form-span">
+                            Texto da aba de frete
+                            <textarea id="shippingMessageInput" rows="3"></textarea>
+                        </label>
 
-                                <label class="checkbox-line">
-                                    <input id="pixOnlineActiveInput" type="checkbox" checked>
-                                    Pix ativo no site
-                                </label>
+                        <label class="form-span">
+                            Texto da aba de cliente
+                            <textarea id="customerLoginMessageInput" rows="3"></textarea>
+                        </label>
 
-                                <label class="checkbox-line">
-                                    <input id="cardOnlineActiveInput" type="checkbox" checked>
-                                    Cartão ativo no site
-                                </label>
-
-                                <label>
-                                    Nome do checkout cartão
-                                    <input id="cardCheckoutNameInput" type="text" autocomplete="off" placeholder="Mercado Pago, InfinitePay, PagSeguro">
-                                </label>
-
-                                <label>
-                                    Link de pagamento cartão
-                                    <input id="cardCheckoutUrlInput" type="url" autocomplete="off" placeholder="https://...">
-                                </label>
-
-                                <label class="form-span">
-                                    Mensagem do Pix
-                                    <textarea id="paymentMessageInput" rows="3" placeholder="Ex: envie o comprovante pelo WhatsApp para confirmarmos seu pedido."></textarea>
-                                </label>
-
-                                <label class="form-span">
-                                    Mensagem do cartão
-                                    <textarea id="cardPaymentMessageInput" rows="3" placeholder="Ex: pague pelo link ou aguarde a loja enviar a cobrança."></textarea>
-                                </label>
-                            </div>
-                        </details>
-
-                        <details class="settings-group">
-                            <summary>
-                                <span>Gateway de pagamento (Asaas etc.)</span>
-                                <span class="panel-note">Só necessário pra Pix automático via QR Code</span>
-                            </summary>
-                            <div class="form-grid">
-                                <label>
-                                    Provedor de pagamento
-                                    <select id="paymentGatewayProviderInput">
-                                        <option value="">Sem gateway real</option>
-                                        <option value="Asaas">Asaas</option>
-                                        <option value="MercadoPago">Mercado Pago</option>
-                                        <option value="PagSeguro">PagSeguro</option>
-                                        <option value="Stripe">Stripe</option>
-                                        <option value="InfinitePay">InfinitePay</option>
-                                        <option value="Outro">Outro</option>
-                                    </select>
-                                </label>
-
-                                <label class="checkbox-line">
-                                    <input id="paymentGatewayActiveInput" type="checkbox">
-                                    Gateway ativo
-                                </label>
-
-                                <label class="checkbox-line">
-                                    <input id="paymentGatewayProductionInput" type="checkbox">
-                                    Modo produção
-                                </label>
-
-                                <label>
-                                    Public key
-                                    <input id="paymentGatewayPublicKeyInput" type="text" autocomplete="off">
-                                </label>
-
-                                <label>
-                                    Access token
-                                    <input id="paymentGatewayAccessTokenInput" type="password" autocomplete="new-password" placeholder="Deixe em branco para manter">
-                                </label>
-
-                                <label>
-                                    Webhook secret
-                                    <input id="paymentGatewayWebhookSecretInput" type="password" autocomplete="new-password" placeholder="Deixe em branco para manter">
-                                </label>
-
-                                <label class="form-span">
-                                    URL de webhook
-                                    <input id="paymentGatewayWebhookUrlInput" type="url" autocomplete="off" placeholder="https://seudominio.com/pagamentos/asaas/webhook">
-                                </label>
-
-                                <div class="config-note form-span">
-                                    <strong>Pagamento real com Asaas</strong>
-                                    <span>Para ativar QR Code Pix automático, selecione Asaas, cole o access token, defina um segredo de webhook e use a URL acima no painel do Asaas. Em produção, marque modo produção somente depois de testar uma compra pequena.</span>
-                                </div>
-                            </div>
-                        </details>
-
-                        <details class="settings-group">
-                            <summary>
-                                <span>E-mail e notificações</span>
-                                <span class="panel-note">Avisos automáticos de pedido</span>
-                            </summary>
-                            <div class="form-grid">
-                                <label class="checkbox-line form-span">
-                                    <input id="emailNotificationsActiveInput" type="checkbox">
-                                    Enviar e-mails automáticos
-                                </label>
-
-                                <label>
-                                    Provedor de e-mail
-                                    <select id="emailProviderInput">
-                                        <option value="Brevo">Brevo API</option>
-                                        <option value="Smtp">SMTP</option>
-                                    </select>
-                                </label>
-
-                                <label>
-                                    API key Brevo
-                                    <input id="brevoApiKeyInput" type="password" autocomplete="new-password" placeholder="Cole a chave criada na Brevo">
-                                </label>
-
-                                <label>
-                                    E-mail remetente
-                                    <input id="emailSenderInput" type="email" autocomplete="off" placeholder="loja@nanamodas.com">
-                                </label>
-
-                                <label>
-                                    E-mail dos pedidos
-                                    <input id="emailOrdersInput" type="text" autocomplete="off" placeholder="pedidos@nanamodas.com">
-                                </label>
-
-                                <label>
-                                    Servidor SMTP
-                                    <input id="smtpHostInput" type="text" autocomplete="off" placeholder="smtp.seudominio.com">
-                                </label>
-
-                                <label>
-                                    Porta SMTP
-                                    <input id="smtpPortInput" type="number" min="1" max="65535" step="1" value="587">
-                                </label>
-
-                                <label>
-                                    Usuário SMTP
-                                    <input id="smtpUserInput" type="text" autocomplete="off">
-                                </label>
-
-                                <label>
-                                    Senha SMTP
-                                    <input id="smtpPasswordInput" type="password" autocomplete="new-password">
-                                </label>
-
-                                <label class="checkbox-line">
-                                    <input id="smtpSslInput" type="checkbox" checked>
-                                    SMTP com SSL
-                                </label>
-
-                                <button class="button button-secondary form-action" id="testEmailButton" type="button">Testar e-mail</button>
-                            </div>
-                        </details>
-
-                        <details class="settings-group">
-                            <summary>
-                                <span>Backup</span>
-                                <span class="panel-note">Cópia automática do banco</span>
-                            </summary>
-                            <div class="form-grid">
-                                <label class="checkbox-line">
-                                    <input id="autoBackupActiveInput" type="checkbox" checked>
-                                    Backup automático ativo
-                                </label>
-
-                                <label>
-                                    Intervalo do backup (horas)
-                                    <input id="autoBackupIntervalInput" type="number" min="1" max="720" step="1" value="24">
-                                </label>
-
-                                <label class="checkbox-line">
-                                    <input id="backupEmailActiveInput" type="checkbox">
-                                    Enviar backup automático por e-mail
-                                </label>
-
-                                <label>
-                                    E-mail de destino do backup
-                                    <input id="backupEmailDestinationInput" type="email" autocomplete="off" placeholder="Deixe em branco para usar o e-mail de pedidos">
-                                </label>
-
-                                <div class="config-note form-span">
-                                    <strong>Backup por e-mail</strong>
-                                    <span>Usa o mesmo provedor de e-mail (Brevo ou SMTP) configurado acima. Sem e-mail configurado, essa opção não tem efeito.</span>
-                                </div>
-                            </div>
-                        </details>
-
-                        <details class="settings-group">
-                            <summary>
-                                <span>Legal e institucional</span>
-                                <span class="panel-note">Política de privacidade, trocas, razão social e CNPJ</span>
-                            </summary>
-                            <div class="form-grid">
-                                <label class="form-span">
-                                    Política de privacidade
-                                    <textarea id="privacyPolicyInput" rows="6" required></textarea>
-                                </label>
-
-                                <label class="form-span">
-                                    Política de trocas e devoluções
-                                    <textarea id="exchangePolicyInput" rows="4"></textarea>
-                                </label>
-
-                                <label>
-                                    Razão social
-                                    <input id="companyLegalNameInput" type="text" autocomplete="off" placeholder="Nome Fantasia Comércio de Roupas LTDA">
-                                </label>
-
-                                <label>
-                                    CNPJ
-                                    <input id="companyCnpjInput" type="text" autocomplete="off" placeholder="00.000.000/0001-00">
-                                </label>
-
-                                <div class="config-note form-span">
-                                    <strong>Rodapé legal</strong>
-                                    <span>Razão social e CNPJ aparecem juntos no rodapé da loja. Deixe em branco pra não mostrar essa linha.</span>
-                                </div>
-                            </div>
-                        </details>
-
-                        <details class="settings-group">
-                            <summary>
-                                <span>Domínio e rastreamento</span>
-                                <span class="panel-note">URL final, Google Analytics e Meta Pixel</span>
-                            </summary>
-                            <div class="form-grid">
-                                <label class="form-span">
-                                    URL do site (domínio final, com https://)
-                                    <input id="siteCanonicalUrlInput" type="url" autocomplete="off" placeholder="https://www.nanamodas.com.br/">
-                                </label>
-
-                                <label>
-                                    Google Analytics (Measurement ID)
-                                    <input id="googleAnalyticsIdInput" type="text" autocomplete="off" placeholder="G-XXXXXXXXXX">
-                                </label>
-
-                                <label>
-                                    Meta Pixel (ID)
-                                    <input id="metaPixelIdInput" type="text" autocomplete="off" placeholder="000000000000000">
-                                </label>
-
-                                <div class="config-note form-span">
-                                    <strong>Rastreamento</strong>
-                                    <span>Enquanto esses campos ficarem vazios, nenhum script de rastreamento é carregado na loja. Preencha só depois de criar as contas no Google Analytics e/ou Meta Business.</span>
-                                </div>
-                            </div>
-                        </details>
-
-                        <button class="button button-primary form-action" type="submit">Salvar configurações</button>
+                        <button class="button button-primary form-action" type="submit">Salvar frete</button>
                     </form>
                 </section>
 
@@ -917,6 +735,188 @@
                 </section>
             </section>
 
+            <section class="view" data-view="emailSettings">
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>E-mail e notificações</h2>
+                            <span class="panel-note">Avisos automáticos de pedido</span>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="emailSettingsForm">
+                        <p class="settings-hint form-span">Enquanto "Enviar e-mails automáticos" estiver marcado sem uma chave/servidor configurado, o salvamento desta e de qualquer outra página de configuração fica bloqueado. Deixe desmarcado até preencher a Brevo ou o SMTP.</p>
+
+                        <label class="checkbox-line form-span">
+                            <input id="emailNotificationsActiveInput" type="checkbox">
+                            Enviar e-mails automáticos
+                        </label>
+
+                        <label>
+                            Provedor de e-mail
+                            <select id="emailProviderInput">
+                                <option value="Brevo">Brevo API</option>
+                                <option value="Smtp">SMTP</option>
+                            </select>
+                        </label>
+
+                        <label>
+                            API key Brevo
+                            <input id="brevoApiKeyInput" type="password" autocomplete="new-password" placeholder="Cole a chave criada na Brevo">
+                        </label>
+
+                        <label>
+                            E-mail remetente
+                            <input id="emailSenderInput" type="email" autocomplete="off" placeholder="loja@nanamodas.com">
+                        </label>
+
+                        <label>
+                            E-mail dos pedidos
+                            <input id="emailOrdersInput" type="text" autocomplete="off" placeholder="pedidos@nanamodas.com">
+                        </label>
+
+                        <label>
+                            Servidor SMTP
+                            <input id="smtpHostInput" type="text" autocomplete="off" placeholder="smtp.seudominio.com">
+                        </label>
+
+                        <label>
+                            Porta SMTP
+                            <input id="smtpPortInput" type="number" min="1" max="65535" step="1" value="587">
+                        </label>
+
+                        <label>
+                            Usuário SMTP
+                            <input id="smtpUserInput" type="text" autocomplete="off">
+                        </label>
+
+                        <label>
+                            Senha SMTP
+                            <input id="smtpPasswordInput" type="password" autocomplete="new-password">
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="smtpSslInput" type="checkbox" checked>
+                            SMTP com SSL
+                        </label>
+
+                        <button class="button button-secondary form-action" id="testEmailButton" type="button">Testar e-mail</button>
+                        <button class="button button-primary form-action" type="submit">Salvar e-mail</button>
+                    </form>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Backup</h2>
+                            <span class="panel-note">Cópia automática do banco</span>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="backupSettingsForm">
+                        <label class="checkbox-line">
+                            <input id="autoBackupActiveInput" type="checkbox" checked>
+                            Backup automático ativo
+                        </label>
+
+                        <label>
+                            Intervalo do backup (horas)
+                            <input id="autoBackupIntervalInput" type="number" min="1" max="720" step="1" value="24">
+                        </label>
+
+                        <label class="checkbox-line">
+                            <input id="backupEmailActiveInput" type="checkbox">
+                            Enviar backup automático por e-mail
+                        </label>
+
+                        <label>
+                            E-mail de destino do backup
+                            <input id="backupEmailDestinationInput" type="email" autocomplete="off" placeholder="Deixe em branco para usar o e-mail de pedidos">
+                        </label>
+
+                        <div class="config-note form-span">
+                            <strong>Backup por e-mail</strong>
+                            <span>Usa o mesmo provedor de e-mail (Brevo ou SMTP) configurado acima. Sem e-mail configurado, essa opção não tem efeito.</span>
+                        </div>
+
+                        <button class="button button-primary form-action" type="submit">Salvar backup</button>
+                    </form>
+                </section>
+            </section>
+
+            <section class="view" data-view="legalSettings">
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Legal e institucional</h2>
+                            <span class="panel-note">Política de privacidade, trocas, razão social e CNPJ</span>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="legalSettingsForm">
+                        <label class="form-span">
+                            Política de privacidade
+                            <textarea id="privacyPolicyInput" rows="6" required></textarea>
+                        </label>
+
+                        <label class="form-span">
+                            Política de trocas e devoluções
+                            <textarea id="exchangePolicyInput" rows="4"></textarea>
+                        </label>
+
+                        <label>
+                            Razão social
+                            <input id="companyLegalNameInput" type="text" autocomplete="off" placeholder="Nome Fantasia Comércio de Roupas LTDA">
+                        </label>
+
+                        <label>
+                            CNPJ
+                            <input id="companyCnpjInput" type="text" autocomplete="off" placeholder="00.000.000/0001-00">
+                        </label>
+
+                        <div class="config-note form-span">
+                            <strong>Rodapé legal</strong>
+                            <span>Razão social e CNPJ aparecem juntos no rodapé da loja. Deixe em branco pra não mostrar essa linha.</span>
+                        </div>
+
+                        <button class="button button-primary form-action" type="submit">Salvar dados legais</button>
+                    </form>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Domínio e rastreamento</h2>
+                            <span class="panel-note">URL final, Google Analytics e Meta Pixel</span>
+                        </div>
+                    </div>
+
+                    <form class="form-grid" id="domainSettingsForm">
+                        <label class="form-span">
+                            URL do site (domínio final, com https://)
+                            <input id="siteCanonicalUrlInput" type="url" autocomplete="off" placeholder="https://www.nanamodas.com.br/">
+                        </label>
+
+                        <label>
+                            Google Analytics (Measurement ID)
+                            <input id="googleAnalyticsIdInput" type="text" autocomplete="off" placeholder="G-XXXXXXXXXX">
+                        </label>
+
+                        <label>
+                            Meta Pixel (ID)
+                            <input id="metaPixelIdInput" type="text" autocomplete="off" placeholder="000000000000000">
+                        </label>
+
+                        <div class="config-note form-span">
+                            <strong>Rastreamento</strong>
+                            <span>Enquanto esses campos ficarem vazios, nenhum script de rastreamento é carregado na loja. Preencha só depois de criar as contas no Google Analytics e/ou Meta Business.</span>
+                        </div>
+
+                        <button class="button button-primary form-action" type="submit">Salvar domínio</button>
+                    </form>
+                </section>
+            </section>
+
             <section class="view" data-view="siteImages">
                 <div class="workspace-grid workspace-grid-wide">
                     <section class="panel">
@@ -931,6 +931,31 @@
                             <label class="form-span">
                                 Texto da faixa superior
                                 <input id="sitePromoTextInput" type="text" autocomplete="off" placeholder="Ex: frete grátis acima de R$ 399">
+                            </label>
+
+                            <label>
+                                Chamada do banner
+                                <input id="bannerEyebrowInput" type="text" autocomplete="off" placeholder="Coleção pronta entrega">
+                            </label>
+
+                            <label>
+                                Título do banner
+                                <input id="bannerTitleInput" type="text" autocomplete="off" placeholder="Nana Modas">
+                            </label>
+
+                            <label class="form-span">
+                                Descrição do banner
+                                <textarea id="bannerDescriptionInput" rows="3"></textarea>
+                            </label>
+
+                            <label>
+                                Botão principal
+                                <input id="bannerPrimaryButtonInput" type="text" autocomplete="off" placeholder="Ver coleção">
+                            </label>
+
+                            <label>
+                                Botão secundário
+                                <input id="bannerSecondaryButtonInput" type="text" autocomplete="off" placeholder="Minha sacola">
                             </label>
 
                             <label class="form-span">

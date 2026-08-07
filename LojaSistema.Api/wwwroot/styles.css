@@ -455,60 +455,6 @@ h2 {
     margin: 0 0 18px;
 }
 
-.settings-group {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--surface-soft);
-    margin-bottom: 12px;
-    padding: 4px 16px;
-}
-
-.settings-group[open] {
-    padding-bottom: 18px;
-}
-
-.settings-group summary {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    min-height: 52px;
-    cursor: pointer;
-    list-style: none;
-    font-weight: 700;
-    color: var(--ink);
-}
-
-.settings-group summary::-webkit-details-marker {
-    display: none;
-}
-
-.settings-group summary::after {
-    content: "Editar";
-    flex-shrink: 0;
-    color: var(--accent);
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.settings-group[open] summary::after {
-    content: "Recolher";
-}
-
-.settings-group summary span:first-child {
-    white-space: nowrap;
-}
-
-.settings-group summary .panel-note {
-    flex: 1;
-    text-align: left;
-    font-weight: 500;
-}
-
-.settings-group .form-grid {
-    margin-top: 14px;
-}
-
 .workspace-grid,
 .pdv-layout {
     display: grid;
