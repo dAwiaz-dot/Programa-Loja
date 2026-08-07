@@ -1717,12 +1717,18 @@ tr:last-child td {
     }
 
     .nav-list {
-        grid-auto-columns: minmax(130px, 1fr);
-        grid-auto-flow: column;
-        overflow-x: auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .nav-section-label {
+        flex-basis: 100%;
     }
 
     .nav-link {
+        flex: 1 1 auto;
+        min-width: 96px;
         text-align: center;
     }
 
