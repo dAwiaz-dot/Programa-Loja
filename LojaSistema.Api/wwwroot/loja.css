@@ -722,6 +722,19 @@ textarea {
     color: var(--gold-strong);
 }
 
+.category-tabs-sub {
+    margin-top: -12px;
+    padding-bottom: 16px;
+}
+
+.category-tab-sub {
+    min-height: 32px;
+    font-weight: 700;
+    font-size: 13px;
+    background: transparent;
+    opacity: 0.85;
+}
+
 .product-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));

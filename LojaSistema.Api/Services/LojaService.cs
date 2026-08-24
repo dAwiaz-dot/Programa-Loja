@@ -279,6 +279,14 @@ public sealed class LojaService
                 .Select(produto => produto.CategoriaId)
                 .ToHashSet();
 
+            foreach (var categoria in _categorias.Values)
+            {
+                if (categoria.CategoriaPaiId is Guid paiId && categoriasPublicadas.Contains(categoria.Id))
+                {
+                    categoriasPublicadas.Add(paiId);
+                }
+            }
+
             return _categorias.Values
                 .Where(categoria => categoriasPublicadas.Contains(categoria.Id))
                 .OrderBy(categoria => categoria.Nome)
@@ -301,7 +309,23 @@ public sealed class LojaService
                 return Resultado<Categoria>.Falha("Ja existe uma categoria com esse nome.");
             }
 
-            var categoria = new Categoria { Nome = nome };
+            Guid? categoriaPaiId = null;
+            if (!string.IsNullOrWhiteSpace(request.CategoriaPaiId))
+            {
+                if (!Guid.TryParse(request.CategoriaPaiId, out var paiId) || !_categorias.TryGetValue(paiId, out var pai))
+                {
+                    return Resultado<Categoria>.Falha("Categoria pai nao encontrada.");
+                }
+
+                if (pai.CategoriaPaiId is not null)
+                {
+                    return Resultado<Categoria>.Falha("Nao e possivel criar subcategoria dentro de outra subcategoria.");
+                }
+
+                categoriaPaiId = paiId;
+            }
+
+            var categoria = new Categoria { Nome = nome, CategoriaPaiId = categoriaPaiId };
             _categorias[categoria.Id] = categoria;
             SalvarTudo();
             return Resultado<Categoria>.Ok(categoria);
@@ -2472,6 +2496,7 @@ public sealed class LojaService
             CREATE TABLE IF NOT EXISTS Categorias (
                 Id TEXT PRIMARY KEY,
                 Nome TEXT NOT NULL,
+                CategoriaPaiId TEXT NULL,
                 Ativa INTEGER NOT NULL,
                 CriadaEm TEXT NOT NULL
             );
@@ -2648,6 +2673,7 @@ public sealed class LojaService
         GarantirColuna(connection, "PedidosOnline", "UrlPagamento", "TEXT NULL");
         GarantirColuna(connection, "PedidosOnline", "PagamentoAtualizadoEm", "TEXT NULL");
         GarantirColuna(connection, "PedidosOnline", "PagamentoConfirmadoEm", "TEXT NULL");
+        GarantirColuna(connection, "Categorias", "CategoriaPaiId", "TEXT NULL");
         GarantirColuna(connection, "Produtos", "Sku", "TEXT NULL");
         GarantirColuna(connection, "Produtos", "TamanhosJson", "TEXT NOT NULL DEFAULT '[]'");
         GarantirColuna(connection, "Produtos", "CoresJson", "TEXT NOT NULL DEFAULT '[]'");
@@ -3063,6 +3089,7 @@ public sealed class LojaService
             {
                 Id = ReadGuid(reader, "Id"),
                 Nome = ReadString(reader, "Nome"),
+                CategoriaPaiId = ReadNullableGuid(reader, "CategoriaPaiId"),
                 Ativa = ReadBool(reader, "Ativa"),
                 CriadaEm = ReadDateTime(reader, "CriadaEm")
             };
@@ -3439,11 +3466,12 @@ public sealed class LojaService
     private void SalvarCategoria(SqliteConnection connection, SqliteTransaction transaction, Categoria categoria)
     {
         using var command = CreateCommand(connection, transaction, """
-            INSERT INTO Categorias (Id, Nome, Ativa, CriadaEm)
-            VALUES ($Id, $Nome, $Ativa, $CriadaEm);
+            INSERT INTO Categorias (Id, Nome, CategoriaPaiId, Ativa, CriadaEm)
+            VALUES ($Id, $Nome, $CategoriaPaiId, $Ativa, $CriadaEm);
             """);
         Add(command, "$Id", categoria.Id);
         Add(command, "$Nome", categoria.Nome);
+        Add(command, "$CategoriaPaiId", categoria.CategoriaPaiId);
         Add(command, "$Ativa", categoria.Ativa);
         Add(command, "$CriadaEm", categoria.CriadaEm);
         command.ExecuteNonQuery();

@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap">
-    <link rel="stylesheet" href="/styles.css?v=20260807-2">
+    <link rel="stylesheet" href="/styles.css?v=20260824-1">
 </head>
 <body>
     <div class="app-shell">
@@ -175,114 +175,148 @@
                             <button class="button button-ghost hidden" id="cancelEditButton" type="button">Cancelar edição</button>
                         </div>
 
-                        <form class="form-grid" id="productForm">
+                        <form class="form-grid product-form" id="productForm">
                             <input type="hidden" id="productId">
 
-                            <label>
-                                Nome
-                                <input id="productName" name="nome" type="text" autocomplete="off" required>
-                            </label>
-
-                            <label>
-                                Categoria
-                                <select id="productCategory" name="categoriaId" required></select>
-                            </label>
-
-                            <label>
-                                SKU / código
-                                <input id="productSku" name="sku" type="text" autocomplete="off" placeholder="Ex: NM-VEST-PRETO-M">
-                            </label>
-
-                            <label>
-                                Preço
-                                <input id="productPrice" name="preco" type="number" min="0.01" step="0.01" required>
-                            </label>
-
-                            <label>
-                                Custo
-                                <input id="productCost" name="custo" type="number" min="0" step="0.01" placeholder="0,00">
-                            </label>
-
-                            <label>
-                                Estoque inicial
-                                <input id="productInitialStock" name="quantidadeInicial" type="number" min="0" step="1" required>
-                            </label>
-
-                            <label class="form-span">
-                                Descrição
-                                <textarea id="productDescription" name="descricao" rows="3"></textarea>
-                            </label>
-
-                            <label>
-                                Tamanhos
-                                <textarea id="productSizes" name="tamanhos" rows="3" placeholder="P, M, G&#10;ou 36, 38, 40"></textarea>
-                            </label>
-
-                            <label>
-                                Cores
-                                <textarea id="productColors" name="cores" rows="3" placeholder="Preto&#10;Dourado"></textarea>
-                            </label>
-
-                            <label class="form-span">
-                                Modelos
-                                <textarea id="productModels" name="modelos" rows="2" placeholder="Curto, longo, canelado"></textarea>
-                            </label>
-
-                            <div class="variant-editor form-span">
-                                <div class="variant-editor-head">
-                                    <strong>Estoque por variação</strong>
-                                    <button class="button button-secondary" id="addVariantRowButton" type="button">Adicionar variação</button>
+                            <div class="form-section form-span">
+                                <div class="form-section-title">
+                                    <span class="form-section-num">1</span>
+                                    Informações do produto
                                 </div>
-                                <div class="variant-grid variant-grid-head">
-                                    <span>Tamanho</span>
-                                    <span>Cor</span>
-                                    <span>Modelo</span>
-                                    <span>Qtd.</span>
-                                    <span></span>
+                                <div class="form-section-grid">
+                                    <label class="form-span">
+                                        Nome
+                                        <input id="productName" name="nome" type="text" autocomplete="off" required>
+                                    </label>
+
+                                    <label>
+                                        Categoria
+                                        <select id="productCategory" name="categoriaId" required></select>
+                                    </label>
+
+                                    <label>
+                                        SKU / código
+                                        <input id="productSku" name="sku" type="text" autocomplete="off" placeholder="Ex: NM-VEST-PRETO-M">
+                                    </label>
                                 </div>
-                                <div class="variant-rows" id="productVariantRows"></div>
-                                <textarea class="hidden" id="productVariantStock" rows="4"></textarea>
                             </div>
 
-                            <label class="form-span">
-                                Guia de medidas
-                                <textarea id="productSizeGuide" name="guiaMedidas" rows="4" placeholder="P: busto 88 cm, cintura 70 cm&#10;M: busto 94 cm, cintura 76 cm"></textarea>
-                            </label>
+                            <div class="form-section form-span">
+                                <div class="form-section-title">
+                                    <span class="form-section-num">2</span>
+                                    Preço e estoque
+                                </div>
+                                <div class="form-section-grid form-section-grid-3">
+                                    <label>
+                                        Preço
+                                        <input id="productPrice" name="preco" type="number" min="0.01" step="0.01" required>
+                                    </label>
 
-                            <label class="form-span">
-                                URL ou caminho da imagem
-                                <input id="productImage" name="imagemUrl" type="text" placeholder="https://... ou /uploads/foto.png">
-                            </label>
+                                    <label>
+                                        Custo
+                                        <input id="productCost" name="custo" type="number" min="0" step="0.01" placeholder="0,00">
+                                    </label>
 
-                            <label class="form-span">
-                                Foto do dispositivo
-                                <input id="productImageFile" type="file" accept="image/png,image/jpeg,image/webp">
-                            </label>
-
-                            <div class="image-preview form-span" id="productImagePreview">
-                                <span>Nenhuma imagem selecionada</span>
+                                    <label>
+                                        Estoque inicial
+                                        <input id="productInitialStock" name="quantidadeInicial" type="number" min="0" step="1" required>
+                                    </label>
+                                </div>
                             </div>
 
-                            <label class="form-span">
-                                Fotos extras
-                                <textarea id="productExtraImages" name="imagensExtras" rows="3" placeholder="/uploads/foto-2.png&#10;https://site.com/foto-3.jpg"></textarea>
-                            </label>
+                            <div class="form-section form-span">
+                                <div class="form-section-title">
+                                    <span class="form-section-num">3</span>
+                                    Descrição e variações
+                                </div>
+                                <div class="form-section-grid">
+                                    <label class="form-span">
+                                        Descrição
+                                        <textarea id="productDescription" name="descricao" rows="3"></textarea>
+                                    </label>
 
-                            <label class="form-span">
-                                Fotos extras do dispositivo
-                                <input id="productExtraImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple>
-                            </label>
+                                    <label>
+                                        Tamanhos
+                                        <textarea id="productSizes" name="tamanhos" rows="3" placeholder="P, M, G&#10;ou 36, 38, 40"></textarea>
+                                    </label>
 
-                            <div class="image-preview-grid form-span" id="productExtraImagePreview">
-                                <span>Nenhuma foto extra selecionada</span>
+                                    <label>
+                                        Cores
+                                        <textarea id="productColors" name="cores" rows="3" placeholder="Preto&#10;Dourado"></textarea>
+                                    </label>
+
+                                    <label class="form-span">
+                                        Modelos
+                                        <textarea id="productModels" name="modelos" rows="2" placeholder="Curto, longo, canelado"></textarea>
+                                    </label>
+
+                                    <div class="variant-editor form-span">
+                                        <div class="variant-editor-head">
+                                            <strong>Estoque por variação</strong>
+                                            <button class="button button-secondary" id="addVariantRowButton" type="button">Adicionar variação</button>
+                                        </div>
+                                        <div class="variant-grid variant-grid-head">
+                                            <span>Tamanho</span>
+                                            <span>Cor</span>
+                                            <span>Modelo</span>
+                                            <span>Qtd.</span>
+                                            <span></span>
+                                        </div>
+                                        <div class="variant-rows" id="productVariantRows"></div>
+                                        <textarea class="hidden" id="productVariantStock" rows="4"></textarea>
+                                    </div>
+
+                                    <label class="form-span">
+                                        Guia de medidas
+                                        <textarea id="productSizeGuide" name="guiaMedidas" rows="4" placeholder="P: busto 88 cm, cintura 70 cm&#10;M: busto 94 cm, cintura 76 cm"></textarea>
+                                    </label>
+                                </div>
                             </div>
 
-                            <label class="checkbox-line">
-                                <input id="productActive" type="checkbox" checked>
-                                Produto ativo
-                            </label>
+                            <div class="form-section form-span">
+                                <div class="form-section-title">
+                                    <span class="form-section-num">4</span>
+                                    Fotos do produto
+                                </div>
+                                <div class="form-section-grid">
+                                    <label class="form-span">
+                                        URL ou caminho da imagem
+                                        <input id="productImage" name="imagemUrl" type="text" placeholder="https://... ou /uploads/foto.png">
+                                    </label>
 
-                            <button class="button button-primary form-action" type="submit">Salvar produto</button>
+                                    <div class="form-span">
+                                        <span class="upload-label">Foto principal</span>
+                                        <input class="file-input" id="productImageFile" type="file" accept="image/png,image/jpeg,image/webp">
+                                    </div>
+
+                                    <div class="image-preview form-span" id="productImagePreview">
+                                        <span>Nenhuma imagem selecionada</span>
+                                    </div>
+
+                                    <label class="form-span">
+                                        Fotos extras
+                                        <textarea id="productExtraImages" name="imagensExtras" rows="3" placeholder="/uploads/foto-2.png&#10;https://site.com/foto-3.jpg"></textarea>
+                                    </label>
+
+                                    <div class="form-span">
+                                        <span class="upload-label">Fotos extras do dispositivo</span>
+                                        <input class="file-input" id="productExtraImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+                                    </div>
+
+                                    <div class="image-preview-grid form-span" id="productExtraImagePreview">
+                                        <span>Nenhuma foto extra selecionada</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="product-form-footer form-span">
+                                <label class="checkbox-line">
+                                    <input id="productActive" type="checkbox" checked>
+                                    Produto ativo
+                                </label>
+
+                                <button class="button button-primary form-action" type="submit">Salvar produto</button>
+                            </div>
                         </form>
                     </section>
 
@@ -292,8 +326,11 @@
                             <span class="panel-note" id="categoryCount">0 cadastradas</span>
                         </div>
 
-                        <form class="inline-form" id="categoryForm">
-                            <input id="categoryName" type="text" placeholder="Nova categoria" autocomplete="off" required>
+                        <form class="inline-form category-form" id="categoryForm">
+                            <input id="categoryName" type="text" placeholder="Nova categoria ou subcategoria" autocomplete="off" required>
+                            <select id="categoryParent">
+                                <option value="">Categoria principal</option>
+                            </select>
                             <button class="button button-secondary" type="submit">Adicionar</button>
                         </form>
 
@@ -314,6 +351,7 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th></th>
                                     <th>Produto</th>
                                     <th>Categoria</th>
                                     <th>Preço</th>
@@ -1614,6 +1652,6 @@
         </form>
     </div>
 
-    <script src="/app.js?v=20260807-1" defer></script>
+    <script src="/app.js?v=20260824-1" defer></script>
 </body>
 </html>

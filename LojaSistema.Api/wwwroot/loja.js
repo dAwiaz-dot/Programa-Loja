@@ -127,6 +127,7 @@ function cacheStoreElements() {
     storeEls.catalogTitle = document.querySelector("#catalogTitle");
     storeEls.catalogSubtitle = document.querySelector("#catalogSubtitle");
     storeEls.categories = document.querySelector("#storeCategories");
+    storeEls.subcategories = document.querySelector("#storeSubcategories");
     storeEls.products = document.querySelector("#storeProducts");
     storeEls.productDetail = document.querySelector("#storeProductDetail");
     storeEls.search = document.querySelector("#storeSearch");
@@ -285,7 +286,7 @@ function bindStoreEvents() {
         });
     }
 
-    storeEls.categories.addEventListener("click", (event) => {
+    const handleCategoryTabClick = (event) => {
         const button = event.target.closest("[data-category]");
         if (!button) {
             return;
@@ -300,7 +301,12 @@ function bindStoreEvents() {
             : "Use os filtros para encontrar o que combina com seu momento.";
         renderStoreCategories();
         renderStoreProducts();
-    });
+    };
+
+    storeEls.categories.addEventListener("click", handleCategoryTabClick);
+    if (storeEls.subcategories) {
+        storeEls.subcategories.addEventListener("click", handleCategoryTabClick);
+    }
 
     storeEls.products.addEventListener("click", handleStoreProductListClick);
     storeEls.homeFeaturedProducts.addEventListener("click", handleStoreProductListClick);
@@ -1167,9 +1173,11 @@ function renderStoreOrderTimeline(order) {
 }
 
 function renderStoreCategories() {
+    const parents = storeState.categories.filter((category) => !category.categoriaPaiId);
+
     const buttons = [
         `<button class="category-tab ${storeState.categoryId === "all" ? "is-active" : ""}" type="button" data-category="all">Todos</button>`,
-        ...storeState.categories.map((category) => `
+        ...parents.map((category) => `
             <button class="category-tab ${storeState.categoryId === category.id ? "is-active" : ""}" type="button" data-category="${category.id}">
                 ${escapeStoreHtml(category.nome)}
             </button>
@@ -1177,6 +1185,27 @@ function renderStoreCategories() {
     ];
 
     storeEls.categories.innerHTML = buttons.join("");
+
+    if (!storeEls.subcategories) {
+        return;
+    }
+
+    const activeParent = parents.find((category) =>
+        category.id === storeState.categoryId ||
+        storeState.categories.some((child) => child.id === storeState.categoryId && child.categoriaPaiId === category.id)
+    );
+    const children = activeParent
+        ? storeState.categories.filter((category) => category.categoriaPaiId === activeParent.id)
+        : [];
+
+    storeEls.subcategories.innerHTML = children
+        .map((child) => `
+            <button class="category-tab category-tab-sub ${storeState.categoryId === child.id ? "is-active" : ""}" type="button" data-category="${child.id}">
+                ${escapeStoreHtml(child.nome)}
+            </button>
+        `)
+        .join("");
+    storeEls.subcategories.classList.toggle("hidden", children.length === 0);
 }
 
 function renderStoreVariationFilters() {
@@ -1231,10 +1260,16 @@ function renderStoreHome() {
 }
 
 function renderStoreHomeCategories() {
-    const categories = storeState.categories.slice(0, 6);
+    const categories = storeState.categories.filter((category) => !category.categoriaPaiId).slice(0, 6);
     storeEls.homeCategoryGrid.innerHTML = categories.length
         ? categories.map((category) => {
-            const count = storeState.products.filter((product) => product.categoriaId === category.id && product.quantidadeEmEstoque > 0).length;
+            const childIds = storeState.categories
+                .filter((child) => child.categoriaPaiId === category.id)
+                .map((child) => child.id);
+            const count = storeState.products.filter((product) =>
+                (product.categoriaId === category.id || childIds.includes(product.categoriaId)) &&
+                product.quantidadeEmEstoque > 0
+            ).length;
             return `
                 <button class="home-category-card" type="button" data-home-category="${category.id}" data-home-category-name="${escapeStoreHtml(category.nome)}">
                     <span>${escapeStoreHtml(category.nome)}</span>
@@ -1295,6 +1330,17 @@ function getStoreProductOptionSummary(product) {
     return parts.join(" · ");
 }
 
+function storeProductMatchesCategory(product) {
+    if (storeState.categoryId === "all") {
+        return true;
+    }
+    if (product.categoriaId === storeState.categoryId) {
+        return true;
+    }
+    const productCategory = storeState.categories.find((category) => category.id === product.categoriaId);
+    return !!productCategory && productCategory.categoriaPaiId === storeState.categoryId;
+}
+
 function getFilteredStoreProducts() {
     const term = normalizeStore(storeState.search);
     const minPrice = Number(storeState.minPrice || 0);
@@ -1302,7 +1348,7 @@ function getFilteredStoreProducts() {
 
     const products = storeState.products
         .filter((product) => storeState.availabilityFilter === "all" || product.quantidadeEmEstoque > 0)
-        .filter((product) => storeState.categoryId === "all" || product.categoriaId === storeState.categoryId)
+        .filter((product) => storeProductMatchesCategory(product))
         .filter((product) => storeState.availabilityFilter !== "low" || product.quantidadeEmEstoque <= 3)
         .filter((product) => !minPrice || product.preco >= minPrice)
         .filter((product) => !maxPrice || product.preco <= maxPrice)

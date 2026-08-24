@@ -282,6 +282,7 @@ function cacheElements() {
 
     els.categoryForm = document.querySelector("#categoryForm");
     els.categoryName = document.querySelector("#categoryName");
+    els.categoryParent = document.querySelector("#categoryParent");
     els.categoryList = document.querySelector("#categoryList");
     els.categoryCount = document.querySelector("#categoryCount");
 
@@ -1317,14 +1318,36 @@ function getDashboardSummary() {
 
 function renderCategories() {
     els.categoryCount.textContent = `${state.categories.length} cadastradas`;
+
+    const parents = state.categories.filter((category) => !category.categoriaPaiId);
     els.categoryList.innerHTML = state.categories.length
-        ? state.categories.map((category) => `<span class="chip">${escapeHtml(category.nome)}</span>`).join("")
+        ? parents.map((parent) => {
+            const children = state.categories.filter((category) => category.categoriaPaiId === parent.id);
+            return `
+                <div class="category-chip-group">
+                    <span class="chip">${escapeHtml(parent.nome)}</span>
+                    ${children.length ? `<div class="category-chip-group-children">${children.map((child) => `<span class="chip chip-sub">${escapeHtml(child.nome)}</span>`).join("")}</div>` : ""}
+                </div>
+            `;
+        }).join("")
         : `<div class="empty-state">Cadastre a primeira categoria.</div>`;
+
+    els.categoryParent.innerHTML = [`<option value="">Categoria principal</option>`]
+        .concat(parents.map((category) => `<option value="${category.id}">Subcategoria de ${escapeHtml(category.nome)}</option>`))
+        .join("");
 }
 
 function renderCategoryOptions() {
-    const options = state.categories
-        .map((category) => `<option value="${category.id}">${escapeHtml(category.nome)}</option>`)
+    const parents = state.categories.filter((category) => !category.categoriaPaiId);
+    const options = parents
+        .map((category) => {
+            const children = state.categories.filter((child) => child.categoriaPaiId === category.id);
+            const own = `<option value="${category.id}">${escapeHtml(category.nome)}</option>`;
+            const childOptions = children
+                .map((child) => `<option value="${child.id}">&nbsp;&nbsp;— ${escapeHtml(child.nome)}</option>`)
+                .join("");
+            return own + childOptions;
+        })
         .join("");
 
     els.productCategory.innerHTML = options;
@@ -1391,8 +1414,13 @@ function renderProductsTable() {
                 product.variacoesEstoque?.length ? `${product.variacoesEstoque.length} variações com estoque` : null
             ].filter(Boolean).join(" · ");
 
+            const thumb = product.imagemUrl
+                ? `<img class="product-thumb" src="${escapeHtml(product.imagemUrl)}" alt="${escapeHtml(product.nome)}">`
+                : `<span class="product-thumb product-thumb-empty">${escapeHtml((product.nome || "?").charAt(0).toUpperCase())}</span>`;
+
             return `
                 <tr>
+                    <td>${thumb}</td>
                     <td>
                         <strong>${escapeHtml(product.nome)}</strong><br>
                         <span class="panel-note">${escapeHtml(product.descricao || "Sem descrição")}</span>
@@ -1410,7 +1438,7 @@ function renderProductsTable() {
                 </tr>
             `;
         }).join("")
-        : `<tr><td colspan="6"><div class="empty-state">Nenhum produto encontrado.</div></td></tr>`;
+        : `<tr><td colspan="7"><div class="empty-state">Nenhum produto encontrado.</div></td></tr>`;
 }
 
 function renderStorefront() {
@@ -3025,9 +3053,13 @@ async function saveCategory(event) {
     try {
         await api("/categorias", {
             method: "POST",
-            body: JSON.stringify({ nome: els.categoryName.value.trim() })
+            body: JSON.stringify({
+                nome: els.categoryName.value.trim(),
+                categoriaPaiId: emptyToNull(els.categoryParent.value)
+            })
         });
         els.categoryName.value = "";
+        els.categoryParent.value = "";
         showToast("Categoria adicionada.");
         await refreshScoped(["categories", "products"]);
     } catch (error) {
