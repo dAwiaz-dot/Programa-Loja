@@ -17,6 +17,7 @@ const state = {
     cart: [],
     lastReceipt: null,
     productSearch: "",
+    productCategoryFilter: "",
     storefrontSearch: "",
     pdvSearch: "",
     stockPickerSearch: "",
@@ -145,6 +146,7 @@ function cacheElements() {
     els.productActive = document.querySelector("#productActive");
     els.cancelEditButton = document.querySelector("#cancelEditButton");
     els.productSearch = document.querySelector("#productSearch");
+    els.productCategoryFilter = document.querySelector("#productCategoryFilter");
     els.productsTable = document.querySelector("#productsTable");
     els.productCount = document.querySelector("#productCount");
 
@@ -484,6 +486,10 @@ function bindEvents() {
 
     els.productSearch.addEventListener("input", (event) => {
         state.productSearch = event.target.value;
+        renderProductsTable();
+    });
+    els.productCategoryFilter.addEventListener("change", (event) => {
+        state.productCategoryFilter = event.target.value;
         renderProductsTable();
     });
 
@@ -1380,6 +1386,15 @@ function renderCategoryOptions() {
         .join("");
 
     els.productCategory.innerHTML = options;
+
+    if (els.productCategoryFilter) {
+        const currentFilter = els.productCategoryFilter.value;
+        els.productCategoryFilter.innerHTML = `<option value="">Todas as categorias</option>${options}`;
+        if ([...els.productCategoryFilter.options].some((option) => option.value === currentFilter)) {
+            els.productCategoryFilter.value = currentFilter;
+        }
+    }
+
     renderSupplierOptions();
     renderStockVariationFields();
 }
@@ -1444,37 +1459,94 @@ function renderStockVariationSelect(wrapper, select, options) {
         : '<option value=""></option>';
 }
 
+const COLOR_SWATCHES = {
+    preto: "#111111", branco: "#f5f5f5", cinza: "#9a9a9a", chumbo: "#4a4a4a",
+    marrom: "#6b4226", caramelo: "#b3722c", bege: "#e3d0ad", nude: "#dcb89c",
+    azul: "#2f5da0", "azul marinho": "#1c2f52", "azul claro": "#7fb4e0",
+    vermelho: "#b3312c", vinho: "#5e1f26", rosa: "#e3a0c0", pink: "#e0428a",
+    verde: "#3f7a4e", "verde militar": "#5c6a45", amarelo: "#e0c23f",
+    laranja: "#d97b2c", roxo: "#6a3f92", lilas: "#b79fd1", dourado: "#c9a24b",
+    prata: "#b7b7b7", "off white": "#efe8dc"
+};
+
+function colorSwatchHex(colorName) {
+    const key = normalize(colorName || "").trim();
+    return COLOR_SWATCHES[key] || null;
+}
+
 function renderProductsTable() {
     const term = normalize(state.productSearch);
-    const products = state.products.filter((product) => {
-        const searchable = normalize(`${product.nome} ${product.sku || ""} ${product.categoria} ${product.descricao || ""} ${(product.tamanhos || []).join(" ")} ${(product.cores || []).join(" ")} ${(product.modelos || []).join(" ")}`);
-        return searchable.includes(term);
+    const categoryFilter = state.productCategoryFilter;
+    const childCategoryIds = categoryFilter
+        ? state.categories.filter((category) => category.categoriaPaiId === categoryFilter).map((category) => category.id)
+        : [];
+
+    const products = state.products
+        .filter((product) => {
+            if (!categoryFilter) {
+                return true;
+            }
+            return product.categoriaId === categoryFilter || childCategoryIds.includes(product.categoriaId);
+        })
+        .filter((product) => {
+            const searchable = normalize(`${product.nome} ${product.sku || ""} ${product.categoria} ${product.descricao || ""} ${(product.tamanhos || []).join(" ")} ${(product.cores || []).join(" ")} ${(product.modelos || []).join(" ")}`);
+            return searchable.includes(term);
+        });
+
+    const totalUnidades = products.reduce((total, product) => total + Number(product.quantidadeEmEstoque || 0), 0);
+    els.productCount.textContent = `${products.length} ${products.length === 1 ? "produto" : "produtos"} · ${totalUnidades} un. em estoque`;
+
+    if (!products.length) {
+        els.productsTable.innerHTML = `<tr><td colspan="7"><div class="empty-state">Nenhum produto encontrado.</div></td></tr>`;
+        return;
+    }
+
+    const groups = new Map();
+    products.forEach((product) => {
+        const key = product.categoria || "Sem categoria";
+        if (!groups.has(key)) {
+            groups.set(key, []);
+        }
+        groups.get(key).push(product);
     });
 
-    els.productCount.textContent = `${products.length} itens`;
-    els.productsTable.innerHTML = products.length
-        ? products.map((product) => {
+    const sortedGroupNames = [...groups.keys()].sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    els.productsTable.innerHTML = sortedGroupNames.map((groupName) => {
+        const groupProducts = groups.get(groupName)
+            .slice()
+            .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR") || (a.cores?.[0] || "").localeCompare(b.cores?.[0] || "", "pt-BR"));
+
+        const rows = groupProducts.map((product) => {
             const margin = product.preco > 0 ? ((product.preco - (product.custo || 0)) / product.preco) * 100 : 0;
+            const identityChips = [
+                ...(product.cores?.length ? product.cores.map((cor) => {
+                    const hex = colorSwatchHex(cor);
+                    const dot = hex ? `<span class="chip-swatch" style="background:${hex}"></span>` : "";
+                    return `<span class="chip chip-sub">${dot}${escapeHtml(cor)}</span>`;
+                }) : []),
+                ...(product.tamanhos?.length ? product.tamanhos.map((tam) => `<span class="chip chip-sub">${escapeHtml(tam)}</span>`) : []),
+                ...(product.modelos?.length ? product.modelos.map((modelo) => `<span class="chip chip-sub">${escapeHtml(modelo)}</span>`) : [])
+            ].join("");
+
             const details = [
                 product.sku ? `SKU ${product.sku}` : null,
                 product.custo ? `Custo ${currency.format(product.custo)} · Margem ${margin.toFixed(1)}%` : null,
-                product.tamanhos?.length ? `Tam. ${product.tamanhos.join(", ")}` : null,
-                product.cores?.length ? `Cores ${product.cores.join(", ")}` : null,
-                product.modelos?.length ? `Modelos ${product.modelos.join(", ")}` : null,
                 product.variacoesEstoque?.length ? `${product.variacoesEstoque.length} variações com estoque` : null
             ].filter(Boolean).join(" · ");
 
+            const primaryColor = colorSwatchHex(product.cores?.[0]);
             const thumb = product.imagemUrl
                 ? `<img class="product-thumb" src="${escapeHtml(product.imagemUrl)}" alt="${escapeHtml(product.nome)}">`
-                : `<span class="product-thumb product-thumb-empty">${escapeHtml((product.nome || "?").charAt(0).toUpperCase())}</span>`;
+                : `<span class="product-thumb product-thumb-empty" ${primaryColor ? `style="background:${primaryColor}"` : ""}>${escapeHtml((product.nome || "?").charAt(0).toUpperCase())}</span>`;
 
             return `
                 <tr>
                     <td>${thumb}</td>
                     <td>
-                        <strong>${escapeHtml(product.nome)}</strong><br>
-                        <span class="panel-note">${escapeHtml(product.descricao || "Sem descrição")}</span>
-                        ${details ? `<br><span class="panel-note">${escapeHtml(details)}</span>` : ""}
+                        <strong>${escapeHtml(product.nome)}</strong>
+                        ${identityChips ? `<div class="product-row-chips">${identityChips}</div>` : ""}
+                        <span class="panel-note">${escapeHtml(details || product.descricao || "Sem descrição")}</span>
                     </td>
                     <td>${escapeHtml(product.categoria)}</td>
                     <td>${currency.format(product.preco)}</td>
@@ -1488,8 +1560,15 @@ function renderProductsTable() {
                     </td>
                 </tr>
             `;
-        }).join("")
-        : `<tr><td colspan="7"><div class="empty-state">Nenhum produto encontrado.</div></td></tr>`;
+        }).join("");
+
+        return `
+            <tr class="table-group-row">
+                <td colspan="7">${escapeHtml(groupName)} <span class="panel-note">· ${groupProducts.length} ${groupProducts.length === 1 ? "item" : "itens"}</span></td>
+            </tr>
+            ${rows}
+        `;
+    }).join("");
 }
 
 function renderStorefront() {
