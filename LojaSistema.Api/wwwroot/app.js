@@ -18,6 +18,7 @@ const state = {
     lastReceipt: null,
     productSearch: "",
     productCategoryFilter: "",
+    productReturnRowId: null,
     storefrontSearch: "",
     pdvSearch: "",
     stockPickerSearch: "",
@@ -1541,7 +1542,7 @@ function renderProductsTable() {
                 : `<span class="product-thumb product-thumb-empty" ${primaryColor ? `style="background:${primaryColor}"` : ""}>${escapeHtml((product.nome || "?").charAt(0).toUpperCase())}</span>`;
 
             return `
-                <tr>
+                <tr data-product-row="${product.id}">
                     <td>${thumb}</td>
                     <td>
                         <strong>${escapeHtml(product.nome)}</strong>
@@ -2866,8 +2867,13 @@ async function saveProduct(event) {
             showToast("Produto cadastrado.");
         }
 
+        const returnRowId = editingId ? state.productReturnRowId : null;
         resetProductForm();
         await refreshScoped(["products"]);
+
+        if (returnRowId) {
+            document.querySelector(`[data-product-row="${returnRowId}"]`)?.scrollIntoView({ block: "center" });
+        }
     } catch (error) {
         showToast(error.message);
     }
@@ -3727,6 +3733,7 @@ function formatCsvCell(value) {
 }
 
 function editProduct(product) {
+    state.productReturnRowId = product.id;
     showView("products");
     els.productId.value = product.id;
     els.productName.value = product.nome;
@@ -3876,6 +3883,7 @@ function resetPanelUserForm() {
 function resetProductForm() {
     els.productForm.reset();
     els.productId.value = "";
+    state.productReturnRowId = null;
     els.productInitialStock.disabled = false;
     els.productInitialStock.value = "0";
     els.productInitialStockLabel.textContent = "Estoque inicial";

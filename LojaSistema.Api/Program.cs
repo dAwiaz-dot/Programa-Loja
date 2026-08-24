@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
@@ -21,6 +22,13 @@ if (!string.IsNullOrWhiteSpace(railwayPort))
     builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
 }
 
+var dataProtectionStorageRoot = builder.Configuration["NANA_STORAGE_ROOT"]?.Trim();
+if (!string.IsNullOrWhiteSpace(dataProtectionStorageRoot))
+{
+    var keysDirectory = new DirectoryInfo(Path.Combine(dataProtectionStorageRoot, "keys"));
+    builder.Services.AddDataProtection().PersistKeysToFileSystem(keysDirectory);
+}
+
 builder.Services.AddSingleton<LojaService>();
 builder.Services.AddHostedService<BackupAutomaticoService>();
 builder.Services.AddHttpClient<AsaasPagamentoService>();
@@ -33,7 +41,7 @@ builder.Services
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.LoginPath = "/login.html";
         options.AccessDeniedPath = "/login.html";
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
         options.Events.OnRedirectToLogin = context =>
         {
@@ -230,7 +238,10 @@ app.MapPost("/auth/login", async (LoginRequest request, LojaService loja, HttpCo
     var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
     var principal = new ClaimsPrincipal(identity);
 
-    await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
+    await context.SignInAsync(
+        CookieAuthenticationDefaults.AuthenticationScheme,
+        principal,
+        new AuthenticationProperties { IsPersistent = true });
     loja.RegistrarAtividadePainel(usuarioPainel.Usuario, "Login", "Acesso ao painel administrativo");
     return Results.Ok(new { usuario = usuarioPainel.Usuario, perfil = usuarioPainel.Perfil, nome = usuarioPainel.NomeExibicao });
 }).RequireRateLimiting("login");
