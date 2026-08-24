@@ -519,7 +519,7 @@ function bindEvents() {
         downloadBackupFile(button.dataset.backupDownload);
     });
 
-    els.productsTable.addEventListener("click", (event) => {
+    els.productsTable.addEventListener("click", async (event) => {
         const button = event.target.closest("[data-action]");
         if (!button) {
             return;
@@ -532,6 +532,10 @@ function bindEvents() {
 
         if (button.dataset.action === "edit") {
             editProduct(product);
+        }
+
+        if (button.dataset.action === "delete") {
+            await deleteProduct(product);
         }
     });
 
@@ -1440,6 +1444,7 @@ function renderProductsTable() {
                     <td>
                         <div class="table-actions">
                             <button class="button button-secondary" type="button" data-action="edit" data-id="${product.id}" title="Editar produto">Editar</button>
+                            <button class="button button-danger" type="button" data-action="delete" data-id="${product.id}" title="Excluir produto">Excluir</button>
                         </div>
                     </td>
                 </tr>
@@ -3069,6 +3074,20 @@ async function saveCategory(event) {
         els.categoryParent.value = "";
         showToast("Categoria adicionada.");
         await refreshScoped(["categories", "products"]);
+    } catch (error) {
+        showToast(error.message);
+    }
+}
+
+async function deleteProduct(product) {
+    if (!window.confirm(`Excluir "${product.nome}"? Essa ação não pode ser desfeita.`)) {
+        return;
+    }
+
+    try {
+        await api(`/produtos/${product.id}`, { method: "DELETE" });
+        showToast("Produto excluído.");
+        await refreshScoped(["products"]);
     } catch (error) {
         showToast(error.message);
     }

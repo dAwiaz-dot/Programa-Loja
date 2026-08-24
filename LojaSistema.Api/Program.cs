@@ -294,6 +294,7 @@ app.MapGet("/api", () => Results.Ok(new
         "GET /produtos",
         "POST /produtos",
         "PUT /produtos/{id}",
+        "DELETE /produtos/{id}",
         "PUT /produtos/{id}/vitrine",
         "GET /fornecedores",
         "POST /fornecedores",
@@ -582,6 +583,18 @@ app.MapPut("/produtos/{id:guid}", (Guid id, AtualizarProdutoRequest request, Loj
 
     loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Produto atualizado", resultado.Valor!.Nome);
     return Results.Ok(resultado.Valor);
+}).RequireAuthorization("CanManageProducts");
+
+app.MapDelete("/produtos/{id:guid}", (Guid id, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.ExcluirProduto(id);
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Produto excluido", resultado.Valor);
+    return Results.NoContent();
 }).RequireAuthorization("CanManageProducts");
 
 app.MapPut("/produtos/{id:guid}/vitrine", (Guid id, AtualizarVitrineProdutoRequest request, LojaService loja, HttpContext context) =>

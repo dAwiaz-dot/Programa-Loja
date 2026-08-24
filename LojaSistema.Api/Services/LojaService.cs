@@ -1128,6 +1128,21 @@ public sealed class LojaService
         }
     }
 
+    public Resultado<string> ExcluirProduto(Guid id)
+    {
+        lock (_sync)
+        {
+            if (!_produtos.TryGetValue(id, out var produto))
+            {
+                return Resultado<string>.Falha("Produto nao encontrado.");
+            }
+
+            _produtos.Remove(id);
+            SalvarTudo();
+            return Resultado<string>.Ok(produto.Nome);
+        }
+    }
+
     public Resultado<ProdutoResponse> AtualizarVitrineProduto(Guid id, AtualizarVitrineProdutoRequest request)
     {
         if (request.PrecoLoja is <= 0)
