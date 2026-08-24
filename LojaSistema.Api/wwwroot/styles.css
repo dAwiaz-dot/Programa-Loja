@@ -688,6 +688,14 @@ textarea:focus {
     grid-column: 1 / -1;
 }
 
+.field-hint {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
 .upload-label {
     display: block;
     color: var(--muted);
@@ -1480,6 +1488,44 @@ tr:last-child td {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
     gap: 12px;
+}
+
+.product-pick-grid-compact {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 4px;
+    margin: 8px 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-soft);
+}
+
+.product-pick-compact {
+    min-height: auto;
+    gap: 6px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    width: 100%;
+}
+
+.product-pick-compact.is-selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.product-pick-compact strong {
+    display: block;
+    font-size: 13px;
+}
+
+.product-pick-compact span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
 }
 
 .product-pick {

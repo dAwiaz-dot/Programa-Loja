@@ -19,6 +19,7 @@ const state = {
     productSearch: "",
     storefrontSearch: "",
     pdvSearch: "",
+    stockPickerSearch: "",
     onlineOrderSearch: "",
     customerSearch: "",
     onlineOrderStatusFilter: "all",
@@ -125,6 +126,8 @@ function cacheElements() {
     els.productPrice = document.querySelector("#productPrice");
     els.productCost = document.querySelector("#productCost");
     els.productInitialStock = document.querySelector("#productInitialStock");
+    els.productInitialStockLabel = document.querySelector("#productInitialStockLabel");
+    els.productInitialStockHint = document.querySelector("#productInitialStockHint");
     els.productDescription = document.querySelector("#productDescription");
     els.productSizes = document.querySelector("#productSizes");
     els.productColors = document.querySelector("#productColors");
@@ -301,6 +304,8 @@ function cacheElements() {
 
     els.stockForm = document.querySelector("#stockForm");
     els.stockProduct = document.querySelector("#stockProduct");
+    els.stockProductSearch = document.querySelector("#stockProductSearch");
+    els.stockProductGrid = document.querySelector("#stockProductGrid");
     els.stockSizeWrap = document.querySelector("#stockSizeWrap");
     els.stockColorWrap = document.querySelector("#stockColorWrap");
     els.stockModelWrap = document.querySelector("#stockModelWrap");
@@ -454,7 +459,20 @@ function bindEvents() {
     els.categoryList.addEventListener("click", handleDeleteCategoryClick);
     els.cancelEditButton.addEventListener("click", resetProductForm);
     els.stockForm.addEventListener("submit", saveStockEntry);
-    els.stockProduct.addEventListener("change", renderStockVariationFields);
+    els.stockProductSearch.addEventListener("input", (event) => {
+        state.stockPickerSearch = event.target.value;
+        renderStockProductPicker();
+    });
+    els.stockProductGrid.addEventListener("click", (event) => {
+        const card = event.target.closest("[data-stock-product]");
+        if (!card) {
+            return;
+        }
+
+        els.stockProduct.value = card.dataset.stockProduct;
+        renderStockProductPicker();
+        renderStockVariationFields();
+    });
     els.supplierForm.addEventListener("submit", saveSupplier);
     els.panelUserForm.addEventListener("submit", savePanelUser);
     els.cancelUserEditButton.addEventListener("click", resetPanelUserForm);
@@ -1362,10 +1380,6 @@ function renderCategoryOptions() {
         .join("");
 
     els.productCategory.innerHTML = options;
-    els.stockProduct.innerHTML = state.products
-        .filter((product) => product.ativo)
-        .map((product) => `<option value="${product.id}">${escapeHtml(product.nome)} · ${product.quantidadeEmEstoque} un.</option>`)
-        .join("");
     renderSupplierOptions();
     renderStockVariationFields();
 }
@@ -1380,6 +1394,31 @@ function renderSupplierOptions() {
         '<option value="">Sem fornecedor</option>',
         ...activeSuppliers.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.nome)}</option>`)
     ].join("");
+}
+
+function renderStockProductPicker() {
+    if (!els.stockProductGrid) {
+        return;
+    }
+
+    const term = normalize(state.stockPickerSearch);
+    const products = state.products
+        .filter((product) => product.ativo)
+        .filter((product) => normalize(`${product.nome} ${product.sku || ""} ${product.categoria}`).includes(term));
+
+    els.stockProductGrid.innerHTML = products.length
+        ? products.map((product) => `
+            <button
+                class="product-pick product-pick-compact ${product.id === els.stockProduct.value ? "is-selected" : ""}"
+                type="button"
+                data-stock-product="${product.id}"
+            >
+                <strong>${escapeHtml(product.nome)}</strong>
+                <span>${escapeHtml(product.categoria)}${product.sku ? ` · ${escapeHtml(product.sku)}` : ""}</span>
+                <span>${product.quantidadeEmEstoque} un. em estoque</span>
+            </button>
+        `).join("")
+        : `<div class="empty-state">Nenhum produto encontrado.</div>`;
 }
 
 function renderStockVariationFields() {
@@ -1793,6 +1832,7 @@ function renderCart() {
 
 function renderStock() {
     renderSuppliers();
+    renderStockProductPicker();
 
     const maxStock = Math.max(...state.products.map((product) => product.quantidadeEmEstoque), 1);
 
@@ -2731,7 +2771,8 @@ async function saveProduct(event) {
                 method: "PUT",
                 body: JSON.stringify({
                     ...payload,
-                    ativo: els.productActive.checked
+                    ativo: els.productActive.checked,
+                    quantidadeEmEstoque: Number(els.productInitialStock.value || 0)
                 })
             });
             showToast("Produto atualizado.");
@@ -3136,6 +3177,11 @@ async function saveSupplier(event) {
 
 async function saveStockEntry(event) {
     event.preventDefault();
+
+    if (!els.stockProduct.value) {
+        showToast("Escolha um produto na lista antes de registrar a entrada.");
+        return;
+    }
 
     try {
         await api(`/produtos/${els.stockProduct.value}/estoque/entrada`, {
@@ -3609,8 +3655,11 @@ function editProduct(product) {
     els.productSku.value = product.sku || "";
     els.productPrice.value = product.preco;
     els.productCost.value = product.custo || 0;
+    const hasVariations = (product.variacoesEstoque || []).length > 0;
     els.productInitialStock.value = product.quantidadeEmEstoque;
-    els.productInitialStock.disabled = true;
+    els.productInitialStock.disabled = hasVariations;
+    els.productInitialStockLabel.textContent = "Estoque atual";
+    els.productInitialStockHint.classList.toggle("hidden", !hasVariations);
     els.productDescription.value = product.descricao || "";
     els.productSizes.value = (product.tamanhos || []).join("\n");
     els.productColors.value = (product.cores || []).join("\n");
@@ -3750,6 +3799,8 @@ function resetProductForm() {
     els.productId.value = "";
     els.productInitialStock.disabled = false;
     els.productInitialStock.value = "0";
+    els.productInitialStockLabel.textContent = "Estoque inicial";
+    els.productInitialStockHint.classList.add("hidden");
     els.productSku.value = "";
     els.productCost.value = "";
     els.productSizes.value = "";

@@ -14,4 +14,5 @@ public sealed record AtualizarProdutoRequest(
     IReadOnlyList<string>? Cores,
     IReadOnlyList<string>? Modelos,
     IReadOnlyList<ProdutoVariacaoEstoqueRequest>? VariacoesEstoque,
-    string? GuiaMedidas);
+    string? GuiaMedidas,
+    int QuantidadeEmEstoque = 0);

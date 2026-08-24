@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap">
-    <link rel="stylesheet" href="/styles.css?v=20260824-3">
+    <link rel="stylesheet" href="/styles.css?v=20260824-4">
 </head>
 <body>
     <div class="app-shell">
@@ -218,8 +218,9 @@
                                     </label>
 
                                     <label>
-                                        Estoque inicial
+                                        <span id="productInitialStockLabel">Estoque inicial</span>
                                         <input id="productInitialStock" name="quantidadeInicial" type="number" min="0" step="1" required>
+                                        <span class="field-hint hidden" id="productInitialStockHint">Esse produto tem variações — edite a quantidade em cada linha abaixo.</span>
                                     </label>
                                 </div>
                             </div>
@@ -1228,10 +1229,12 @@
                         </div>
 
                         <form class="form-grid" id="stockForm">
-                            <label class="form-span">
-                                Produto
-                                <select id="stockProduct" required></select>
-                            </label>
+                            <div class="form-span">
+                                <span class="upload-label">Produto</span>
+                                <input class="search-input" id="stockProductSearch" type="search" placeholder="Buscar roupa ou produto" autocomplete="off">
+                                <div class="product-pick-grid product-pick-grid-compact" id="stockProductGrid"></div>
+                                <input type="hidden" id="stockProduct">
+                            </div>
 
                             <label id="stockSizeWrap" class="hidden">
                                 Tamanho
@@ -1652,6 +1655,6 @@
         </form>
     </div>
 
-    <script src="/app.js?v=20260824-3" defer></script>
+    <script src="/app.js?v=20260824-4" defer></script>
 </body>
 </html>

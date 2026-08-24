@@ -1120,6 +1120,21 @@ public sealed class LojaService
             {
                 produto.QuantidadeEmEstoque = produto.VariacoesEstoque.Sum(variacao => variacao.Quantidade);
             }
+            else
+            {
+                var quantidadeAnterior = produto.QuantidadeEmEstoque;
+                var quantidadeNova = Math.Max(0, request.QuantidadeEmEstoque);
+                if (quantidadeNova != quantidadeAnterior)
+                {
+                    produto.QuantidadeEmEstoque = quantidadeNova;
+                    RegistrarMovimentacao(
+                        produto,
+                        TipoMovimentacaoEstoque.Ajuste,
+                        quantidadeNova - quantidadeAnterior,
+                        "Ajuste manual no cadastro do produto",
+                        null);
+                }
+            }
             produto.GuiaMedidas = NormalizarTextoOpcional(request.GuiaMedidas);
             produto.AtualizadoEm = DateTime.UtcNow;
 
