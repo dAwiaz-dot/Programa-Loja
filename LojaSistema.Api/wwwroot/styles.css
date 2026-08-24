@@ -900,6 +900,26 @@ textarea:focus {
     border-style: dashed;
 }
 
+.chip-remove {
+    display: inline-grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 6px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+}
+
+.chip-remove:hover {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
 .chip-list {
     display: flex;
     flex-wrap: wrap;

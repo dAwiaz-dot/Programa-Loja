@@ -332,6 +332,31 @@ public sealed class LojaService
         }
     }
 
+    public Resultado<bool> ExcluirCategoria(Guid id)
+    {
+        lock (_sync)
+        {
+            if (!_categorias.TryGetValue(id, out _))
+            {
+                return Resultado<bool>.Falha("Categoria nao encontrada.");
+            }
+
+            if (_categorias.Values.Any(categoria => categoria.CategoriaPaiId == id))
+            {
+                return Resultado<bool>.Falha("Exclua ou mova as subcategorias antes de excluir esta categoria.");
+            }
+
+            if (_produtos.Values.Any(produto => produto.CategoriaId == id))
+            {
+                return Resultado<bool>.Falha("Existem produtos cadastrados nesta categoria. Mova ou exclua os produtos antes.");
+            }
+
+            _categorias.Remove(id);
+            SalvarTudo();
+            return Resultado<bool>.Ok(true);
+        }
+    }
+
     public IReadOnlyList<Fornecedor> ListarFornecedores(bool apenasAtivos)
     {
         lock (_sync)

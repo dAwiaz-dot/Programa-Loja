@@ -290,6 +290,7 @@ app.MapGet("/api", () => Results.Ok(new
         "GET /health",
         "GET /categorias",
         "POST /categorias",
+        "DELETE /categorias/{id}",
         "GET /produtos",
         "POST /produtos",
         "PUT /produtos/{id}",
@@ -497,6 +498,14 @@ app.MapPost("/categorias", (CriarCategoriaRequest request, LojaService loja) =>
     var resultado = loja.CriarCategoria(request);
     return resultado.Sucesso
         ? Results.Created($"/categorias/{resultado.Valor!.Id}", resultado.Valor)
+        : Results.BadRequest(new { erro = resultado.Erro });
+}).RequireAuthorization("CanManageProducts");
+
+app.MapDelete("/categorias/{id:guid}", (Guid id, LojaService loja) =>
+{
+    var resultado = loja.ExcluirCategoria(id);
+    return resultado.Sucesso
+        ? Results.NoContent()
         : Results.BadRequest(new { erro = resultado.Erro });
 }).RequireAuthorization("CanManageProducts");
 

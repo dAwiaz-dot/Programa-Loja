@@ -451,6 +451,7 @@ function bindEvents() {
     els.couponForm.addEventListener("submit", saveCoupon);
     els.cancelCouponEditButton.addEventListener("click", resetCouponForm);
     els.categoryForm.addEventListener("submit", saveCategory);
+    els.categoryList.addEventListener("click", handleDeleteCategoryClick);
     els.cancelEditButton.addEventListener("click", resetProductForm);
     els.stockForm.addEventListener("submit", saveStockEntry);
     els.stockProduct.addEventListener("change", renderStockVariationFields);
@@ -1320,13 +1321,19 @@ function renderCategories() {
     els.categoryCount.textContent = `${state.categories.length} cadastradas`;
 
     const parents = state.categories.filter((category) => !category.categoriaPaiId);
+    const renderChip = (category, extraClass = "") => `
+        <span class="chip ${extraClass}">
+            ${escapeHtml(category.nome)}
+            <button class="chip-remove" type="button" data-remove-category="${category.id}" title="Excluir categoria">×</button>
+        </span>
+    `;
     els.categoryList.innerHTML = state.categories.length
         ? parents.map((parent) => {
             const children = state.categories.filter((category) => category.categoriaPaiId === parent.id);
             return `
                 <div class="category-chip-group">
-                    <span class="chip">${escapeHtml(parent.nome)}</span>
-                    ${children.length ? `<div class="category-chip-group-children">${children.map((child) => `<span class="chip chip-sub">${escapeHtml(child.nome)}</span>`).join("")}</div>` : ""}
+                    ${renderChip(parent)}
+                    ${children.length ? `<div class="category-chip-group-children">${children.map((child) => renderChip(child, "chip-sub")).join("")}</div>` : ""}
                 </div>
             `;
         }).join("")
@@ -3061,6 +3068,25 @@ async function saveCategory(event) {
         els.categoryName.value = "";
         els.categoryParent.value = "";
         showToast("Categoria adicionada.");
+        await refreshScoped(["categories", "products"]);
+    } catch (error) {
+        showToast(error.message);
+    }
+}
+
+async function handleDeleteCategoryClick(event) {
+    const button = event.target.closest("[data-remove-category]");
+    if (!button) {
+        return;
+    }
+
+    if (!window.confirm("Excluir esta categoria? Só é possível excluir categorias sem produtos e sem subcategorias.")) {
+        return;
+    }
+
+    try {
+        await api(`/categorias/${button.dataset.removeCategory}`, { method: "DELETE" });
+        showToast("Categoria excluída.");
         await refreshScoped(["categories", "products"]);
     } catch (error) {
         showToast(error.message);
