@@ -963,6 +963,16 @@ textarea:focus {
     gap: 10px;
 }
 
+.variant-quick-add {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.variant-quick-add input {
+    flex: 1;
+}
+
 .variant-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr)) 92px 92px;

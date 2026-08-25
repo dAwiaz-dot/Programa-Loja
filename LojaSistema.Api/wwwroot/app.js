@@ -136,6 +136,8 @@ function cacheElements() {
     els.productModels = document.querySelector("#productModels");
     els.productVariantRows = document.querySelector("#productVariantRows");
     els.addVariantRowButton = document.querySelector("#addVariantRowButton");
+    els.variantQuickAddInput = document.querySelector("#variantQuickAddInput");
+    els.variantQuickAddButton = document.querySelector("#variantQuickAddButton");
     els.productVariantStock = document.querySelector("#productVariantStock");
     els.productSizeGuide = document.querySelector("#productSizeGuide");
     els.productImage = document.querySelector("#productImage");
@@ -309,6 +311,11 @@ function cacheElements() {
     els.stockProduct = document.querySelector("#stockProduct");
     els.stockProductSearch = document.querySelector("#stockProductSearch");
     els.stockProductGrid = document.querySelector("#stockProductGrid");
+    els.stockMetricUnits = document.querySelector("#stockMetricUnits");
+    els.stockMetricCostValue = document.querySelector("#stockMetricCostValue");
+    els.stockMetricSaleValue = document.querySelector("#stockMetricSaleValue");
+    els.stockMetricProfit = document.querySelector("#stockMetricProfit");
+    els.stockValueByCategoryTable = document.querySelector("#stockValueByCategoryTable");
     els.stockSizeWrap = document.querySelector("#stockSizeWrap");
     els.stockColorWrap = document.querySelector("#stockColorWrap");
     els.stockModelWrap = document.querySelector("#stockModelWrap");
@@ -386,6 +393,13 @@ function bindEvents() {
     els.logoutButton.addEventListener("click", logoutAdmin);
     els.productForm.addEventListener("submit", saveProduct);
     els.addVariantRowButton.addEventListener("click", () => addProductVariantRow());
+    els.variantQuickAddButton.addEventListener("click", applyVariantQuickAdd);
+    els.variantQuickAddInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            applyVariantQuickAdd();
+        }
+    });
     els.productVariantRows.addEventListener("input", syncProductVariantTextarea);
     els.productVariantRows.addEventListener("click", (event) => {
         const button = event.target.closest("[data-variant-action='remove']");
@@ -1910,9 +1924,53 @@ function renderCart() {
     }
 }
 
+function renderStockValueSummary() {
+    const activeProducts = state.products.filter((product) => product.ativo);
+
+    const totals = activeProducts.reduce((acc, product) => {
+        const quantidade = Number(product.quantidadeEmEstoque || 0);
+        acc.unidades += quantidade;
+        acc.custo += quantidade * Number(product.custo || 0);
+        acc.venda += quantidade * Number(product.preco || 0);
+        return acc;
+    }, { unidades: 0, custo: 0, venda: 0 });
+
+    els.stockMetricUnits.textContent = totals.unidades;
+    els.stockMetricCostValue.textContent = currency.format(totals.custo);
+    els.stockMetricSaleValue.textContent = currency.format(totals.venda);
+    els.stockMetricProfit.textContent = currency.format(totals.venda - totals.custo);
+
+    const byCategory = new Map();
+    activeProducts.forEach((product) => {
+        const key = product.categoria || "Sem categoria";
+        const quantidade = Number(product.quantidadeEmEstoque || 0);
+        const entry = byCategory.get(key) || { produtos: 0, pecas: 0, custo: 0, venda: 0 };
+        entry.produtos += 1;
+        entry.pecas += quantidade;
+        entry.custo += quantidade * Number(product.custo || 0);
+        entry.venda += quantidade * Number(product.preco || 0);
+        byCategory.set(key, entry);
+    });
+
+    const rows = [...byCategory.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
+
+    els.stockValueByCategoryTable.innerHTML = rows.length
+        ? rows.map(([categoria, entry]) => `
+            <tr>
+                <td>${escapeHtml(categoria)}</td>
+                <td>${entry.produtos}</td>
+                <td>${entry.pecas}</td>
+                <td>${currency.format(entry.custo)}</td>
+                <td>${currency.format(entry.venda)}</td>
+            </tr>
+        `).join("")
+        : `<tr><td colspan="5"><div class="empty-state">Nenhum produto ativo cadastrado.</div></td></tr>`;
+}
+
 function renderStock() {
     renderSuppliers();
     renderStockProductPicker();
+    renderStockValueSummary();
 
     const maxStock = Math.max(...state.products.map((product) => product.quantidadeEmEstoque), 1);
 
@@ -4205,6 +4263,51 @@ function renderProductVariantRows(variations = []) {
     els.productVariantRows.innerHTML = "";
     (variations || []).forEach((variation) => addProductVariantRow(variation));
     syncProductVariantTextarea();
+}
+
+function applyVariantQuickAdd() {
+    const raw = els.variantQuickAddInput.value.trim();
+    if (!raw) {
+        return;
+    }
+
+    const chunks = raw.split(/[,\n]/).map((chunk) => chunk.trim()).filter(Boolean);
+    const parsed = [];
+    for (const chunk of chunks) {
+        const match = chunk.match(/^(\d+)\s*-\s*(.+)$/);
+        if (!match) {
+            showToast(`Não entendi "${chunk}". Use o formato 1-M, 2-P.`);
+            return;
+        }
+        parsed.push({ quantidade: Number(match[1]), tamanho: match[2].trim() });
+    }
+
+    const existingSizes = parseTextList(els.productSizes.value);
+    const newSizes = parsed
+        .map((item) => item.tamanho)
+        .filter((tamanho) => !existingSizes.some((size) => size.toLowerCase() === tamanho.toLowerCase()));
+    if (newSizes.length) {
+        els.productSizes.value = [...existingSizes, ...new Set(newSizes)].join(", ");
+    }
+
+    parsed.forEach(({ quantidade, tamanho }) => {
+        const existingRow = Array.from(els.productVariantRows.querySelectorAll("[data-variant-row]")).find((row) => {
+            const tamanhoValue = row.querySelector('[data-variant-field="tamanho"]')?.value.trim().toLowerCase();
+            const corValue = row.querySelector('[data-variant-field="cor"]')?.value.trim();
+            const modeloValue = row.querySelector('[data-variant-field="modelo"]')?.value.trim();
+            return tamanhoValue === tamanho.toLowerCase() && !corValue && !modeloValue;
+        });
+
+        if (existingRow) {
+            existingRow.querySelector('[data-variant-field="quantidade"]').value = quantidade;
+        } else {
+            addProductVariantRow({ tamanho, quantidade });
+        }
+    });
+
+    syncProductVariantTextarea();
+    els.variantQuickAddInput.value = "";
+    els.variantQuickAddInput.focus();
 }
 
 function addProductVariantRow(variation = {}) {

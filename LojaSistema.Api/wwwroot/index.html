@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap">
-    <link rel="stylesheet" href="/styles.css?v=20260824-5">
+    <link rel="stylesheet" href="/styles.css?v=20260825-1">
 </head>
 <body>
     <div class="app-shell">
@@ -219,7 +219,7 @@
 
                                     <label>
                                         <span id="productInitialStockLabel">Estoque inicial</span>
-                                        <input id="productInitialStock" name="quantidadeInicial" type="number" min="0" step="1" required>
+                                        <input id="productInitialStock" name="quantidadeInicial" type="number" min="0" step="1" value="0">
                                         <span class="field-hint hidden" id="productInitialStockHint">Esse produto tem variações — edite a quantidade em cada linha abaixo.</span>
                                     </label>
                                 </div>
@@ -255,6 +255,10 @@
                                         <div class="variant-editor-head">
                                             <strong>Estoque por variação</strong>
                                             <button class="button button-secondary" id="addVariantRowButton" type="button">Adicionar variação</button>
+                                        </div>
+                                        <div class="variant-quick-add">
+                                            <input type="text" id="variantQuickAddInput" placeholder="Atalho: 1-M, 2-P, 3-G">
+                                            <button class="button button-secondary" id="variantQuickAddButton" type="button">Adicionar</button>
                                         </div>
                                         <div class="variant-grid variant-grid-head">
                                             <span>Tamanho</span>
@@ -1224,6 +1228,46 @@
             </section>
 
             <section class="view" data-view="stock">
+                <div class="metric-grid">
+                    <article class="metric-card">
+                        <span>Peças em estoque</span>
+                        <strong id="stockMetricUnits">0</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Valor em custo</span>
+                        <strong id="stockMetricCostValue">R$ 0,00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Valor em venda</span>
+                        <strong id="stockMetricSaleValue">R$ 0,00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Lucro potencial</span>
+                        <strong id="stockMetricProfit">R$ 0,00</strong>
+                    </article>
+                </div>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Valor por categoria</h2>
+                        <span class="panel-note">Custo e venda com base no estoque atual</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Categoria</th>
+                                    <th>Produtos</th>
+                                    <th>Peças</th>
+                                    <th>Valor em custo</th>
+                                    <th>Valor em venda</th>
+                                </tr>
+                            </thead>
+                            <tbody id="stockValueByCategoryTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+
                 <div class="workspace-grid workspace-grid-wide">
                     <section class="panel">
                         <div class="panel-header">
@@ -1658,6 +1702,6 @@
         </form>
     </div>
 
-    <script src="/app.js?v=20260824-6" defer></script>
+    <script src="/app.js?v=20260825-1" defer></script>
 </body>
 </html>
