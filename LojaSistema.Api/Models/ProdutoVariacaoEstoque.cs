@@ -6,4 +6,5 @@ public sealed class ProdutoVariacaoEstoque
     public string? Cor { get; set; }
     public string? Modelo { get; set; }
     public int Quantidade { get; set; }
+    public string? Sku { get; set; }
 }

@@ -4,4 +4,5 @@ public sealed record ProdutoVariacaoEstoqueRequest(
     string? Tamanho,
     string? Cor,
     string? Modelo,
-    int Quantidade);
+    int Quantidade,
+    string? Sku);

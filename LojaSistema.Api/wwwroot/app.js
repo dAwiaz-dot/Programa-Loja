@@ -394,6 +394,7 @@ function bindEvents() {
     els.productForm.addEventListener("submit", saveProduct);
     els.addVariantRowButton.addEventListener("click", () => addProductVariantRow());
     els.variantQuickAddButton.addEventListener("click", applyVariantQuickAdd);
+    els.productSku.addEventListener("input", refreshAutoVariantSkus);
     els.variantQuickAddInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
             event.preventDefault();
@@ -1856,16 +1857,28 @@ function addPdvProductByExactCode(event) {
         return;
     }
 
-    const product = state.products.find((item) =>
-        item.ativo &&
-        (normalize(item.sku || "") === term || normalize(item.nome) === term));
+    let matchedVariation = null;
+    const product = state.products.find((item) => {
+        if (!item.ativo) {
+            return false;
+        }
+        if (normalize(item.sku || "") === term || normalize(item.nome) === term) {
+            return true;
+        }
+        const variation = (item.variacoesEstoque || []).find((v) => normalize(v.sku || "") === term);
+        if (variation) {
+            matchedVariation = variation;
+            return true;
+        }
+        return false;
+    });
 
     if (!product) {
         showToast("Nenhum produto com esse SKU exato.");
         return;
     }
 
-    addToCart(product.id);
+    addToCart(product.id, matchedVariation);
     els.pdvSearch.value = "";
     state.pdvSearch = "";
     renderPdvProducts();
@@ -4253,10 +4266,11 @@ function parseVariantStockList(value) {
                 tamanho: emptyToNull(parts[0] || ""),
                 cor: emptyToNull(hasCompactQuantity && parts.length === 2 ? "" : parts[1] || ""),
                 modelo: emptyToNull(hasCompactQuantity ? "" : parts[2] || ""),
-                quantidade: Number.isFinite(quantidade) ? Math.max(0, Math.floor(quantidade)) : 0
+                quantidade: Number.isFinite(quantidade) ? Math.max(0, Math.floor(quantidade)) : 0,
+                sku: emptyToNull(hasCompactQuantity ? "" : parts[4] || "")
             };
         })
-        .filter((variation) => variation.tamanho || variation.cor || variation.modelo || variation.quantidade > 0);
+        .filter((variation) => variation.tamanho || variation.cor || variation.modelo || variation.quantidade > 0 || variation.sku);
 }
 
 function renderProductVariantRows(variations = []) {
@@ -4310,18 +4324,65 @@ function applyVariantQuickAdd() {
     els.variantQuickAddInput.focus();
 }
 
+function buildVariantSku(baseSku, tamanho) {
+    const base = (baseSku || "").trim();
+    const size = (tamanho || "").trim();
+    if (!base || !size) {
+        return "";
+    }
+    const suffix = size
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^A-Z0-9]+/g, "");
+    return suffix ? `${base}-${suffix}` : base;
+}
+
 function addProductVariantRow(variation = {}) {
     const row = document.createElement("div");
     row.className = "variant-grid variant-row";
     row.dataset.variantRow = "true";
+    const autoSku = buildVariantSku(els.productSku.value, variation.tamanho);
+    const hasManualSku = Boolean(variation.sku) && variation.sku !== autoSku;
+    row.dataset.skuAuto = hasManualSku ? "false" : "true";
     row.innerHTML = `
         <input type="text" data-variant-field="tamanho" value="${escapeHtml(variation.tamanho || "")}" placeholder="P">
         <input type="text" data-variant-field="cor" value="${escapeHtml(variation.cor || "")}" placeholder="Preto">
         <input type="text" data-variant-field="modelo" value="${escapeHtml(variation.modelo || "")}" placeholder="Básica">
         <input type="number" min="0" step="1" data-variant-field="quantidade" value="${Number(variation.quantidade || 0)}">
+        <input type="text" data-variant-field="sku" value="${escapeHtml(variation.sku || autoSku)}" placeholder="Gerado automaticamente">
         <button class="button button-danger" type="button" data-variant-action="remove">Remover</button>
     `;
+
+    const tamanhoInput = row.querySelector('[data-variant-field="tamanho"]');
+    const skuInput = row.querySelector('[data-variant-field="sku"]');
+    tamanhoInput.addEventListener("input", () => {
+        if (row.dataset.skuAuto !== "false") {
+            skuInput.value = buildVariantSku(els.productSku.value, tamanhoInput.value);
+        }
+    });
+    skuInput.addEventListener("input", () => {
+        row.dataset.skuAuto = skuInput.value === buildVariantSku(els.productSku.value, tamanhoInput.value) ? "true" : "false";
+    });
+
     els.productVariantRows.appendChild(row);
+    syncProductVariantTextarea();
+}
+
+function refreshAutoVariantSkus() {
+    if (!els.productVariantRows) {
+        return;
+    }
+    Array.from(els.productVariantRows.querySelectorAll("[data-variant-row]")).forEach((row) => {
+        if (row.dataset.skuAuto === "false") {
+            return;
+        }
+        const tamanho = row.querySelector('[data-variant-field="tamanho"]')?.value || "";
+        const skuInput = row.querySelector('[data-variant-field="sku"]');
+        if (skuInput) {
+            skuInput.value = buildVariantSku(els.productSku.value, tamanho);
+        }
+    });
     syncProductVariantTextarea();
 }
 
@@ -4334,10 +4395,11 @@ function collectProductVariantRows() {
                 tamanho: emptyToNull(getValue("tamanho")),
                 cor: emptyToNull(getValue("cor")),
                 modelo: emptyToNull(getValue("modelo")),
-                quantidade: Number.isFinite(quantidade) ? Math.max(0, Math.floor(quantidade)) : 0
+                quantidade: Number.isFinite(quantidade) ? Math.max(0, Math.floor(quantidade)) : 0,
+                sku: emptyToNull(getValue("sku"))
             };
         })
-        .filter((variation) => variation.tamanho || variation.cor || variation.modelo || variation.quantidade > 0);
+        .filter((variation) => variation.tamanho || variation.cor || variation.modelo || variation.quantidade > 0 || variation.sku);
 }
 
 function syncProductVariantTextarea() {
@@ -4350,7 +4412,8 @@ function formatVariantStockList(variations) {
             variation.tamanho || "",
             variation.cor || "",
             variation.modelo || "",
-            variation.quantidade || 0
+            variation.quantidade || 0,
+            variation.sku || ""
         ].join(" | "))
         .join("\n");
 }

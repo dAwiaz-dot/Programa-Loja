@@ -4734,7 +4734,8 @@ public sealed class LojaService
             variacao.Tamanho,
             variacao.Cor,
             variacao.Modelo,
-            variacao.Quantidade);
+            variacao.Quantidade,
+            variacao.Sku);
     }
 
     private static ClienteResponse CriarClienteResponse(Cliente cliente)
@@ -5372,6 +5373,7 @@ public sealed class LojaService
             var tamanho = NormalizarTextoOpcional(variacao.Tamanho);
             var cor = NormalizarTextoOpcional(variacao.Cor);
             var modelo = NormalizarTextoOpcional(variacao.Modelo);
+            var sku = NormalizarTextoOpcional(variacao.Sku);
 
             if (variacao.Quantidade < 0)
             {
@@ -5395,7 +5397,8 @@ public sealed class LojaService
                 Tamanho = tamanho,
                 Cor = cor,
                 Modelo = modelo,
-                Quantidade = variacao.Quantidade
+                Quantidade = variacao.Quantidade,
+                Sku = sku
             });
         }
 
@@ -5406,7 +5409,8 @@ public sealed class LojaService
                 Tamanho = grupo.First().Tamanho,
                 Cor = grupo.First().Cor,
                 Modelo = grupo.First().Modelo,
-                Quantidade = grupo.Sum(item => item.Quantidade)
+                Quantidade = grupo.Sum(item => item.Quantidade),
+                Sku = grupo.First().Sku
             })
             .Where(variacao => variacao.Quantidade > 0)
             .ToList();

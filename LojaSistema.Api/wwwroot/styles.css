@@ -975,7 +975,7 @@ textarea:focus {
 
 .variant-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) 92px 92px;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 92px minmax(0, 1.2fr) 92px;
     gap: 8px;
     align-items: center;
 }
