@@ -196,8 +196,8 @@
 
                                     <label>
                                         Código base
-                                        <input id="productSku" name="sku" type="text" autocomplete="off" placeholder="Ex: NM-VEST-PRETO">
-                                        <span class="field-hint">Se o produto tiver variação por tamanho, o código de cada linha é completado sozinho (ex: NM-VEST-PRETO-M).</span>
+                                        <input id="productSku" name="sku" type="text" autocomplete="off" placeholder="Ex: NMVESTPRETO">
+                                        <span class="field-hint">Se o produto tiver variação por tamanho, o código de cada linha é completado sozinho (ex: NMVESTPRETOM), sem traço, pra não atrapalhar a bipagem.</span>
                                     </label>
                                 </div>
                             </div>
@@ -247,11 +247,6 @@
                                         <textarea id="productColors" name="cores" rows="3" placeholder="Preto&#10;Dourado"></textarea>
                                     </label>
 
-                                    <label class="form-span">
-                                        Modelos
-                                        <textarea id="productModels" name="modelos" rows="2" placeholder="Curto, longo, canelado"></textarea>
-                                    </label>
-
                                     <div class="variant-editor form-span">
                                         <div class="variant-editor-head">
                                             <strong>Estoque por variação</strong>
@@ -264,7 +259,6 @@
                                         <div class="variant-grid variant-grid-head">
                                             <span>Tamanho</span>
                                             <span>Cor</span>
-                                            <span>Modelo</span>
                                             <span>Qtd.</span>
                                             <span>Código</span>
                                             <span></span>
@@ -436,33 +430,7 @@
                                 <input id="storefrontOrder" type="number" min="0" step="1" value="0">
                             </label>
 
-                            <label class="form-span">
-                                Imagem principal do site
-                                <input id="storefrontImage" type="text" placeholder="https://... ou /uploads/foto.png">
-                            </label>
-
-                            <label class="form-span">
-                                Foto principal do dispositivo
-                                <input id="storefrontImageFile" type="file" accept="image/png,image/jpeg,image/webp">
-                            </label>
-
-                            <div class="image-preview form-span" id="storefrontImagePreview">
-                                <span>Nenhuma imagem do site selecionada</span>
-                            </div>
-
-                            <label class="form-span">
-                                Fotos extras do site
-                                <textarea id="storefrontExtraImages" rows="3" placeholder="/uploads/foto-2.png&#10;https://site.com/foto-3.jpg"></textarea>
-                            </label>
-
-                            <label class="form-span">
-                                Fotos extras do dispositivo
-                                <input id="storefrontExtraImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple>
-                            </label>
-
-                            <div class="image-preview-grid form-span" id="storefrontExtraImagePreview">
-                                <span>Nenhuma foto extra do site selecionada</span>
-                            </div>
+                            <span class="field-hint form-span">A foto exibida é a mesma cadastrada no Estoque (aba Produtos, parte 4 — Fotos do produto).</span>
 
                             <button class="button button-primary form-action" type="submit">Salvar vitrine</button>
                         </form>

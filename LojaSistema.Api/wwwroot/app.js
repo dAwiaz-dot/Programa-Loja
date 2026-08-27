@@ -80,8 +80,6 @@ const roleConfigs = {
 const els = {};
 let productImageObjectUrl = null;
 let productExtraImageObjectUrls = [];
-let storefrontImageObjectUrl = null;
-let storefrontExtraImageObjectUrls = [];
 let siteImageObjectUrls = [];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -133,7 +131,6 @@ function cacheElements() {
     els.productDescription = document.querySelector("#productDescription");
     els.productSizes = document.querySelector("#productSizes");
     els.productColors = document.querySelector("#productColors");
-    els.productModels = document.querySelector("#productModels");
     els.productVariantRows = document.querySelector("#productVariantRows");
     els.addVariantRowButton = document.querySelector("#addVariantRowButton");
     els.variantQuickAddInput = document.querySelector("#variantQuickAddInput");
@@ -162,12 +159,6 @@ function cacheElements() {
     els.storefrontDescription = document.querySelector("#storefrontDescription");
     els.storefrontPrice = document.querySelector("#storefrontPrice");
     els.storefrontOrder = document.querySelector("#storefrontOrder");
-    els.storefrontImage = document.querySelector("#storefrontImage");
-    els.storefrontImageFile = document.querySelector("#storefrontImageFile");
-    els.storefrontImagePreview = document.querySelector("#storefrontImagePreview");
-    els.storefrontExtraImages = document.querySelector("#storefrontExtraImages");
-    els.storefrontExtraImageFiles = document.querySelector("#storefrontExtraImageFiles");
-    els.storefrontExtraImagePreview = document.querySelector("#storefrontExtraImagePreview");
     els.storefrontSearch = document.querySelector("#storefrontSearch");
     els.storefrontProductList = document.querySelector("#storefrontProductList");
     els.storefrontCount = document.querySelector("#storefrontCount");
@@ -430,18 +421,6 @@ function bindEvents() {
             editStorefrontProduct(product);
         }
     });
-    els.storefrontImage.addEventListener("input", () => {
-        if (!els.storefrontImageFile.files.length) {
-            setStorefrontImagePreview(els.storefrontImage.value);
-        }
-    });
-    els.storefrontImageFile.addEventListener("change", previewSelectedStorefrontImage);
-    els.storefrontExtraImages.addEventListener("input", () => {
-        if (!els.storefrontExtraImageFiles.files.length) {
-            setStorefrontExtraImagePreview(parseImageList(els.storefrontExtraImages.value));
-        }
-    });
-    els.storefrontExtraImageFiles.addEventListener("change", previewSelectedStorefrontExtraImages);
     els.paymentSettingsForm.addEventListener("submit", saveSiteConfig);
     els.paymentGatewayForm.addEventListener("submit", saveSiteConfig);
     els.shippingConfigForm.addEventListener("submit", saveSiteConfig);
@@ -2912,7 +2891,7 @@ async function saveProduct(event) {
             imagensExtras,
             tamanhos: parseTextList(els.productSizes.value),
             cores: parseTextList(els.productColors.value),
-            modelos: parseTextList(els.productModels.value),
+            modelos: [],
             variacoesEstoque,
             guiaMedidas: emptyToNull(els.productSizeGuide.value)
         };
@@ -2960,25 +2939,6 @@ async function saveStorefrontProduct(event) {
     }
 
     try {
-        let imagemLojaUrl = emptyToNull(els.storefrontImage.value);
-        let imagensLojaExtras = parseImageList(els.storefrontExtraImages.value);
-
-        if (els.storefrontImageFile.files.length > 0) {
-            const upload = await uploadProductImage(els.storefrontImageFile.files[0]);
-            imagemLojaUrl = upload.imagemUrl;
-            els.storefrontImage.value = imagemLojaUrl;
-        }
-
-        if (els.storefrontExtraImageFiles.files.length > 0) {
-            const uploads = await Promise.all(
-                Array.from(els.storefrontExtraImageFiles.files).map((file) => uploadProductImage(file))
-            );
-            imagensLojaExtras = mergeImageUrls(imagensLojaExtras, uploads.map((upload) => upload.imagemUrl));
-            els.storefrontExtraImages.value = imagensLojaExtras.join("\n");
-        }
-
-        imagensLojaExtras = mergeImageUrls(imagensLojaExtras).filter((image) => image !== imagemLojaUrl);
-
         await api(`/produtos/${productId}/vitrine`, {
             method: "PUT",
             body: JSON.stringify({
@@ -2988,13 +2948,11 @@ async function saveStorefrontProduct(event) {
                 nomeLoja: emptyToNull(els.storefrontName.value),
                 descricaoLoja: emptyToNull(els.storefrontDescription.value),
                 precoLoja: els.storefrontPrice.value ? Number(els.storefrontPrice.value) : null,
-                imagemLojaUrl,
-                imagensLojaExtras
+                imagemLojaUrl: null,
+                imagensLojaExtras: []
             })
         });
 
-        els.storefrontImageFile.value = "";
-        els.storefrontExtraImageFiles.value = "";
         showToast("Vitrine do site atualizada.");
         await refreshScoped(["products"]);
 
@@ -3820,7 +3778,6 @@ function editProduct(product) {
     els.productDescription.value = product.descricao || "";
     els.productSizes.value = (product.tamanhos || []).join("\n");
     els.productColors.value = (product.cores || []).join("\n");
-    els.productModels.value = (product.modelos || []).join("\n");
     renderProductVariantRows(product.variacoesEstoque || []);
     els.productSizeGuide.value = product.guiaMedidas || "";
     els.productImage.value = product.imagemUrl || "";
@@ -3846,13 +3803,6 @@ function editStorefrontProduct(product, focusForm = true, switchView = true) {
     els.storefrontDescription.value = product.descricaoLoja || "";
     els.storefrontPrice.value = product.precoLoja ?? "";
     els.storefrontOrder.value = product.ordemLoja || 0;
-    els.storefrontImage.value = product.imagemLojaUrl || "";
-    els.storefrontImageFile.value = "";
-    setStorefrontImagePreview(getStorefrontImage(product));
-    els.storefrontExtraImages.value = (product.imagensLojaExtras || []).join("\n");
-    els.storefrontExtraImageFiles.value = "";
-    setStorefrontExtraImagePreview(getStorefrontImages(product));
-
     if (focusForm) {
         els.storefrontName.focus();
     }
@@ -3963,7 +3913,6 @@ function resetProductForm() {
     els.productCost.value = "";
     els.productSizes.value = "";
     els.productColors.value = "";
-    els.productModels.value = "";
     renderProductVariantRows([]);
     els.productSizeGuide.value = "";
     els.productActive.checked = true;
@@ -4042,73 +3991,6 @@ function setProductExtraImagePreview(sources, objectUrls = []) {
 
     els.productExtraImagePreview.innerHTML = images
         .map((source) => `<img src="${escapeHtml(source)}" alt="Prévia de foto extra do produto">`)
-        .join("");
-}
-
-function previewSelectedStorefrontImage() {
-    const file = els.storefrontImageFile.files[0];
-    if (!file) {
-        setStorefrontImagePreview(els.storefrontImage.value);
-        return;
-    }
-
-    if (!isAcceptedImageFile(file)) {
-        els.storefrontImageFile.value = "";
-        showToast("Escolha uma imagem JPG, PNG ou WebP de até 5 MB.");
-        return;
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    setStorefrontImagePreview(objectUrl, true);
-}
-
-function setStorefrontImagePreview(source, isObjectUrl = false) {
-    if (storefrontImageObjectUrl && storefrontImageObjectUrl !== source) {
-        URL.revokeObjectURL(storefrontImageObjectUrl);
-        storefrontImageObjectUrl = null;
-    }
-
-    if (isObjectUrl) {
-        storefrontImageObjectUrl = source;
-    }
-
-    if (!source) {
-        els.storefrontImagePreview.innerHTML = "<span>Nenhuma imagem do site selecionada</span>";
-        return;
-    }
-
-    els.storefrontImagePreview.innerHTML = `<img src="${escapeHtml(source)}" alt="Prévia da imagem do site">`;
-}
-
-function previewSelectedStorefrontExtraImages() {
-    const files = Array.from(els.storefrontExtraImageFiles.files);
-    if (!files.length) {
-        setStorefrontExtraImagePreview(parseImageList(els.storefrontExtraImages.value));
-        return;
-    }
-
-    if (files.some((file) => !isAcceptedImageFile(file))) {
-        els.storefrontExtraImageFiles.value = "";
-        showToast("Escolha imagens JPG, PNG ou WebP de até 5 MB.");
-        return;
-    }
-
-    const objectUrls = files.map((file) => URL.createObjectURL(file));
-    setStorefrontExtraImagePreview(mergeImageUrls(parseImageList(els.storefrontExtraImages.value), objectUrls), objectUrls);
-}
-
-function setStorefrontExtraImagePreview(sources, objectUrls = []) {
-    storefrontExtraImageObjectUrls.forEach((source) => URL.revokeObjectURL(source));
-    storefrontExtraImageObjectUrls = objectUrls;
-
-    const images = mergeImageUrls(sources);
-    if (!images.length) {
-        els.storefrontExtraImagePreview.innerHTML = "<span>Nenhuma foto extra do site selecionada</span>";
-        return;
-    }
-
-    els.storefrontExtraImagePreview.innerHTML = images
-        .map((source) => `<img src="${escapeHtml(source)}" alt="Prévia de foto extra do site">`)
         .join("");
 }
 
@@ -4236,10 +4118,6 @@ function getStorefrontImage(product) {
     return product.imagemLojaUrl || product.imagemUrl;
 }
 
-function getStorefrontImages(product) {
-    return product.imagensLojaExtras?.length ? product.imagensLojaExtras : product.imagensExtras || [];
-}
-
 function isAcceptedImageFile(file) {
     const maxSize = 5 * 1024 * 1024;
     return file.type.startsWith("image/") && file.size <= maxSize;
@@ -4260,17 +4138,16 @@ function parseVariantStockList(value) {
         .filter(Boolean)
         .map((line) => {
             const parts = line.split("|").map((part) => part.trim());
-            const quantidade = Number(parts.length >= 4 ? parts[3] : parts.at(-1) || 0);
-            const hasCompactQuantity = parts.length < 4;
+            const quantidade = Number(parts.length >= 3 ? parts[2] : parts.at(-1) || 0);
+            const hasCompactQuantity = parts.length < 3;
             return {
                 tamanho: emptyToNull(parts[0] || ""),
                 cor: emptyToNull(hasCompactQuantity && parts.length === 2 ? "" : parts[1] || ""),
-                modelo: emptyToNull(hasCompactQuantity ? "" : parts[2] || ""),
                 quantidade: Number.isFinite(quantidade) ? Math.max(0, Math.floor(quantidade)) : 0,
-                sku: emptyToNull(hasCompactQuantity ? "" : parts[4] || "")
+                sku: emptyToNull(hasCompactQuantity ? "" : parts[3] || "")
             };
         })
-        .filter((variation) => variation.tamanho || variation.cor || variation.modelo || variation.quantidade > 0 || variation.sku);
+        .filter((variation) => variation.tamanho || variation.cor || variation.quantidade > 0 || variation.sku);
 }
 
 function renderProductVariantRows(variations = []) {
@@ -4308,8 +4185,7 @@ function applyVariantQuickAdd() {
         const existingRow = Array.from(els.productVariantRows.querySelectorAll("[data-variant-row]")).find((row) => {
             const tamanhoValue = row.querySelector('[data-variant-field="tamanho"]')?.value.trim().toLowerCase();
             const corValue = row.querySelector('[data-variant-field="cor"]')?.value.trim();
-            const modeloValue = row.querySelector('[data-variant-field="modelo"]')?.value.trim();
-            return tamanhoValue === tamanho.toLowerCase() && !corValue && !modeloValue;
+            return tamanhoValue === tamanho.toLowerCase() && !corValue;
         });
 
         if (existingRow) {
@@ -4335,7 +4211,19 @@ function buildVariantSku(baseSku, tamanho) {
         .normalize("NFD")
         .replace(/[̀-ͯ]/g, "")
         .replace(/[^A-Z0-9]+/g, "");
-    return suffix ? `${base}-${suffix}` : base;
+    return suffix ? `${base}${suffix}` : base;
+}
+
+function addValueToTextList(textarea, value) {
+    const clean = (value || "").trim();
+    if (!clean || !textarea) {
+        return;
+    }
+    const existing = parseTextList(textarea.value);
+    if (existing.some((item) => item.toLowerCase() === clean.toLowerCase())) {
+        return;
+    }
+    textarea.value = [...existing, clean].join(", ");
 }
 
 function addProductVariantRow(variation = {}) {
@@ -4348,25 +4236,34 @@ function addProductVariantRow(variation = {}) {
     row.innerHTML = `
         <input type="text" data-variant-field="tamanho" value="${escapeHtml(variation.tamanho || "")}" placeholder="P">
         <input type="text" data-variant-field="cor" value="${escapeHtml(variation.cor || "")}" placeholder="Preto">
-        <input type="text" data-variant-field="modelo" value="${escapeHtml(variation.modelo || "")}" placeholder="Básica">
         <input type="number" min="0" step="1" data-variant-field="quantidade" value="${Number(variation.quantidade || 0)}">
         <input type="text" data-variant-field="sku" value="${escapeHtml(variation.sku || autoSku)}" placeholder="Gerado automaticamente">
         <button class="button button-danger" type="button" data-variant-action="remove">Remover</button>
     `;
 
     const tamanhoInput = row.querySelector('[data-variant-field="tamanho"]');
+    const corInput = row.querySelector('[data-variant-field="cor"]');
     const skuInput = row.querySelector('[data-variant-field="sku"]');
     tamanhoInput.addEventListener("input", () => {
         if (row.dataset.skuAuto !== "false") {
             skuInput.value = buildVariantSku(els.productSku.value, tamanhoInput.value);
         }
     });
+    tamanhoInput.addEventListener("change", () => addValueToTextList(els.productSizes, tamanhoInput.value));
+    corInput.addEventListener("change", () => addValueToTextList(els.productColors, corInput.value));
     skuInput.addEventListener("input", () => {
         row.dataset.skuAuto = skuInput.value === buildVariantSku(els.productSku.value, tamanhoInput.value) ? "true" : "false";
     });
 
     els.productVariantRows.appendChild(row);
     syncProductVariantTextarea();
+
+    if (variation.tamanho) {
+        addValueToTextList(els.productSizes, variation.tamanho);
+    }
+    if (variation.cor) {
+        addValueToTextList(els.productColors, variation.cor);
+    }
 }
 
 function refreshAutoVariantSkus() {
@@ -4394,12 +4291,11 @@ function collectProductVariantRows() {
             return {
                 tamanho: emptyToNull(getValue("tamanho")),
                 cor: emptyToNull(getValue("cor")),
-                modelo: emptyToNull(getValue("modelo")),
                 quantidade: Number.isFinite(quantidade) ? Math.max(0, Math.floor(quantidade)) : 0,
                 sku: emptyToNull(getValue("sku"))
             };
         })
-        .filter((variation) => variation.tamanho || variation.cor || variation.modelo || variation.quantidade > 0 || variation.sku);
+        .filter((variation) => variation.tamanho || variation.cor || variation.quantidade > 0 || variation.sku);
 }
 
 function syncProductVariantTextarea() {
@@ -4411,7 +4307,6 @@ function formatVariantStockList(variations) {
         .map((variation) => [
             variation.tamanho || "",
             variation.cor || "",
-            variation.modelo || "",
             variation.quantidade || 0,
             variation.sku || ""
         ].join(" | "))
