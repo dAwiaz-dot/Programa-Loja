@@ -10,8 +10,8 @@
     <link rel="manifest" href="/site.webmanifest">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap">
-    <link rel="stylesheet" href="/styles.css?v=20260825-1">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&family=Fraunces:ital,wght@0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="/styles.css?v=20260829-2">
 </head>
 <body>
     <div class="app-shell">
@@ -62,109 +62,161 @@
             </header>
 
             <section class="view is-active" data-view="dashboard">
-                <div class="metric-grid">
-                    <article class="metric-card">
-                        <span>Faturamento total</span>
-                        <strong id="metricRevenue">R$ 0,00</strong>
-                    </article>
-                    <article class="metric-card">
-                        <span>Vendas PDV</span>
-                        <strong id="metricSales">0</strong>
-                    </article>
-                    <article class="metric-card">
-                        <span>Pedidos online</span>
-                        <strong id="metricOnlineOrders">0</strong>
-                    </article>
-                    <article class="metric-card">
-                        <span>Produtos ativos</span>
-                        <strong id="metricActiveProducts">0</strong>
-                    </article>
-                    <article class="metric-card metric-alert">
-                        <span>Estoque baixo</span>
-                        <strong id="metricLowStock">0</strong>
-                    </article>
-                </div>
+                <div class="dash-root">
+                    <section class="dash-hero">
+                        <div class="dash-hero-figure">
+                            <p class="dash-hero-label">Faturamento total · <span id="dashPeriodLabel">últimos 14 dias</span></p>
+                            <p class="dash-hero-number" id="metricRevenue">R$ 0,00</p>
+                            <p class="dash-hero-sub"><span id="metricSales">0</span> vendas no PDV · <span id="metricOnlineOrders">0</span> pedidos online · ticket médio <span id="metricTicketMedio">R$ 0,00</span></p>
+                        </div>
+                        <div class="dash-hero-split">
+                            <div class="dash-hero-split-row">
+                                <span class="dash-hero-split-label"><span class="dash-dot" style="background:var(--dash-s1)"></span>Loja física</span>
+                                <span class="dash-hero-split-value" id="dashFaturamentoLoja">R$ 0,00</span>
+                            </div>
+                            <div class="dash-hero-split-row">
+                                <span class="dash-hero-split-label"><span class="dash-dot" style="background:var(--dash-s2)"></span>Online</span>
+                                <span class="dash-hero-split-value" id="dashFaturamentoOnline">R$ 0,00</span>
+                            </div>
+                            <div class="dash-hero-split-row">
+                                <span class="dash-hero-split-label"><span class="dash-dot" style="background:var(--dash-brand)"></span>Lucro estimado</span>
+                                <span class="dash-hero-split-value" id="dashLucroEstimado">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </section>
 
-                <section class="operation-hub" aria-label="Atalhos do painel">
-                    <div>
-                        <p class="eyebrow">Fluxo do dia</p>
-                        <h2>Admin organizado por área</h2>
-                        <span>Use os atalhos para cuidar da loja online, PDV, estoque, pedidos e relatórios sem procurar no menu.</span>
-                    </div>
-                    <div class="hub-actions">
+                    <nav class="dash-quick-actions" aria-label="Atalhos do painel">
                         <button type="button" data-view-target="storefront">Publicar produtos</button>
                         <button type="button" data-view-target="onlineOrders">Ver pedidos</button>
                         <button type="button" data-view-target="stock">Repor estoque</button>
                         <button type="button" data-view-target="reports">Analisar vendas</button>
+                    </nav>
+
+                    <div class="dash-kpi-row">
+                        <div class="dash-kpi-card">
+                            <div class="dash-kpi-label">Produtos ativos</div>
+                            <div class="dash-kpi-value" id="metricActiveProducts">0</div>
+                            <div class="dash-kpi-foot" id="dashProductsFoot">de 0 cadastrados</div>
+                        </div>
+                        <div class="dash-kpi-card">
+                            <div class="dash-kpi-label">Estoque baixo</div>
+                            <div class="dash-kpi-value" id="metricLowStock">0</div>
+                            <div class="dash-kpi-foot">3 unidades ou menos</div>
+                        </div>
+                        <div class="dash-kpi-card">
+                            <div class="dash-kpi-label">Pedidos online</div>
+                            <div class="dash-kpi-value" id="dashPedidosOnline">0</div>
+                            <div class="dash-kpi-foot">no período</div>
+                        </div>
+                        <div class="dash-kpi-card">
+                            <div class="dash-kpi-label">Produto mais vendido</div>
+                            <div class="dash-kpi-value dash-kpi-value-name" id="dashTopProductName">—</div>
+                            <div class="dash-kpi-foot" id="dashTopProductFoot">sem dados no período</div>
+                        </div>
                     </div>
-                </section>
 
-                <div class="dashboard-grid">
-                    <section class="panel">
-                        <div class="panel-header">
-                            <h2>Ações pendentes</h2>
-                            <span class="panel-note">Atalhos do dia</span>
+                    <div class="dash-grid-2">
+                        <section class="dash-panel">
+                            <div class="dash-panel-head">
+                                <h3>Faturamento e lucro por dia</h3>
+                                <span class="dash-panel-note">Últimos 14 dias</span>
+                            </div>
+                            <div class="dash-legend">
+                                <span class="dash-legend-item"><span class="dash-legend-swatch" style="background:var(--dash-s1)"></span>Faturamento</span>
+                                <span class="dash-legend-item"><span class="dash-legend-swatch" style="background:var(--dash-s2)"></span>Lucro</span>
+                            </div>
+                            <div class="dash-trend-wrap" id="dashTrendWrap">
+                                <svg id="dashTrendSvg" viewBox="0 0 640 220" width="100%" height="220" role="img" aria-label="Faturamento e lucro por dia"></svg>
+                                <div class="dash-tooltip" id="dashTrendTooltip"></div>
+                            </div>
+                        </section>
+
+                        <section class="dash-panel">
+                            <div class="dash-panel-head">
+                                <h3>Vendas por forma de pagamento</h3>
+                                <span class="dash-panel-note">Período</span>
+                            </div>
+                            <div class="dash-bar-list" id="dashPaymentBars"></div>
+                        </section>
+                    </div>
+
+                    <div class="dash-grid-2">
+                        <section class="dash-panel">
+                            <div class="dash-panel-head">
+                                <h3>Produtos mais vendidos</h3>
+                                <span class="dash-panel-note">Por quantidade</span>
+                            </div>
+                            <div class="dash-rank-list" id="dashRankList"></div>
+                        </section>
+
+                        <section class="dash-panel">
+                            <div class="dash-panel-head">
+                                <h3>Estoque em atenção</h3>
+                                <span class="dash-panel-note">3 unidades ou menos</span>
+                            </div>
+                            <div class="dash-compact-list" id="lowStockList"></div>
+                        </section>
+                    </div>
+
+                    <section class="dash-panel">
+                        <div class="dash-panel-head">
+                            <h3>Atalhos do dia</h3>
+                            <span class="dash-panel-note">Ações pendentes</span>
                         </div>
-                        <div class="compact-list" id="pendingActionsList"></div>
+                        <div class="dash-compact-list" id="pendingActionsList"></div>
                     </section>
 
-                    <section class="panel">
-                        <div class="panel-header">
-                            <h2>Produtos em atenção</h2>
-                            <span class="panel-note">3 unidades ou menos</span>
-                        </div>
-                        <div class="compact-list" id="lowStockList"></div>
-                    </section>
+                    <div class="dash-grid-2">
+                        <section class="dash-panel">
+                            <div class="dash-panel-head">
+                                <h3>Últimas vendas</h3>
+                                <span class="dash-panel-note">PDV</span>
+                            </div>
+                            <div class="dash-compact-list" id="recentSalesList"></div>
+                        </section>
 
-                    <section class="panel">
-                        <div class="panel-header">
-                            <h2>Últimas vendas</h2>
-                            <span class="panel-note">PDV</span>
-                        </div>
-                        <div class="compact-list" id="recentSalesList"></div>
-                    </section>
+                        <section class="dash-panel">
+                            <div class="dash-panel-head">
+                                <h3>Últimos pedidos online</h3>
+                                <span class="dash-panel-note">Site</span>
+                            </div>
+                            <div class="dash-compact-list" id="recentOrdersList"></div>
+                        </section>
+                    </div>
 
-                    <section class="panel">
-                        <div class="panel-header">
-                            <h2>Últimos pedidos online</h2>
-                            <span class="panel-note">Site</span>
+                    <details class="dash-more">
+                        <summary>
+                            <span>Histórico e configuração da loja</span>
+                            <span class="dash-panel-note">Atividades, checklist de produção e próximas melhorias</span>
+                        </summary>
+
+                        <div class="dash-grid-3">
+                            <section class="dash-panel">
+                                <div class="dash-panel-head">
+                                    <h3>Atividades recentes</h3>
+                                    <span class="dash-panel-note">Painel</span>
+                                </div>
+                                <div class="dash-compact-list" id="activityList"></div>
+                            </section>
+
+                            <section class="dash-panel">
+                                <div class="dash-panel-head">
+                                    <h3>Checklist produção</h3>
+                                    <span class="dash-panel-note">Antes de hospedar</span>
+                                </div>
+                                <div class="dash-compact-list" id="productionChecklist"></div>
+                            </section>
+
+                            <section class="dash-panel">
+                                <div class="dash-panel-head">
+                                    <h3>Próximas melhorias</h3>
+                                    <span class="dash-panel-note">Prioridade prática</span>
+                                </div>
+                                <div class="dash-compact-list" id="adminReadinessList"></div>
+                            </section>
                         </div>
-                        <div class="compact-list" id="recentOrdersList"></div>
-                    </section>
+                    </details>
                 </div>
-
-                <details class="dashboard-more">
-                    <summary>
-                        <span>Histórico e configuração da loja</span>
-                        <span class="panel-note">Atividades, checklist de produção e próximas melhorias</span>
-                    </summary>
-
-                    <div class="dashboard-grid">
-                        <section class="panel">
-                            <div class="panel-header">
-                                <h2>Atividades recentes</h2>
-                                <span class="panel-note">Painel</span>
-                            </div>
-                            <div class="compact-list" id="activityList"></div>
-                        </section>
-
-                        <section class="panel">
-                            <div class="panel-header">
-                                <h2>Checklist produção</h2>
-                                <span class="panel-note">Antes de hospedar</span>
-                            </div>
-                            <div class="compact-list" id="productionChecklist"></div>
-                        </section>
-
-                        <section class="panel">
-                            <div class="panel-header">
-                                <h2>Próximas melhorias</h2>
-                                <span class="panel-note">Prioridade prática</span>
-                            </div>
-                            <div class="compact-list" id="adminReadinessList"></div>
-                        </section>
-                    </div>
-                </details>
             </section>
 
             <section class="view" data-view="products">
@@ -196,8 +248,9 @@
 
                                     <label>
                                         Código base
-                                        <input id="productSku" name="sku" type="text" autocomplete="off" placeholder="Ex: NM-VEST-PRETO">
-                                        <span class="field-hint">Se o produto tiver variação por tamanho, o código de cada linha é completado sozinho (ex: NM-VEST-PRETO-M).</span>
+                                        <input id="productSku" name="sku" type="text" autocomplete="off" placeholder="Ex: NMVESTPRETO">
+                                        <button class="button button-secondary button-full" id="generateSkuButton" type="button">Gerar código automático</button>
+                                        <span class="field-hint">Se o produto tiver variação por tamanho, o código de cada linha é completado sozinho, sem traço (ex: NMVESTPRETOM).</span>
                                     </label>
                                 </div>
                             </div>
@@ -247,11 +300,6 @@
                                         <textarea id="productColors" name="cores" rows="3" placeholder="Preto&#10;Dourado"></textarea>
                                     </label>
 
-                                    <label class="form-span">
-                                        Modelos
-                                        <textarea id="productModels" name="modelos" rows="2" placeholder="Curto, longo, canelado"></textarea>
-                                    </label>
-
                                     <div class="variant-editor form-span">
                                         <div class="variant-editor-head">
                                             <strong>Estoque por variação</strong>
@@ -264,7 +312,6 @@
                                         <div class="variant-grid variant-grid-head">
                                             <span>Tamanho</span>
                                             <span>Cor</span>
-                                            <span>Modelo</span>
                                             <span>Qtd.</span>
                                             <span>Código</span>
                                             <span></span>
@@ -292,7 +339,7 @@
                             </div>
                         </form>
 
-                        <div class="label-print-box hidden" id="labelPrintBox"></div>
+                        <div class="label-print-preview hidden" id="labelPrintPreview"></div>
                     </section>
 
                     <section class="panel">
@@ -974,19 +1021,38 @@
                                 <input id="bannerSecondaryButtonInput" type="text" autocomplete="off" placeholder="Minha sacola">
                             </label>
 
-                            <label class="form-span">
-                                Imagem principal do banner
-                                <input id="bannerImageInput" type="text" autocomplete="off" placeholder="/uploads/banner.jpg ou https://...">
-                            </label>
-
-                            <label class="form-span">
-                                Foto principal do dispositivo
-                                <input id="bannerImageFile" type="file" accept="image/png,image/jpeg,image/webp">
-                            </label>
-
-                            <div class="image-preview form-span" id="bannerImagePreview">
-                                <span>Nenhum banner principal selecionado</span>
-                            </div>
+                            <details class="image-slot form-span" data-image-slot="banner">
+                                <summary>
+                                    <span class="image-slot-thumb" id="bannerCurrentThumb"><span>NM</span></span>
+                                    <span class="image-slot-info">
+                                        <strong>Foto do banner principal</strong>
+                                        <small>Imagem de topo da loja</small>
+                                    </span>
+                                    <span class="image-slot-toggle">Trocar foto</span>
+                                </summary>
+                                <div class="image-slot-body">
+                                    <div class="image-slot-compare">
+                                        <div>
+                                            <span class="image-slot-compare-label">Foto atual</span>
+                                            <div class="image-preview" id="bannerCurrentPreview"><span>Nenhuma foto salva</span></div>
+                                        </div>
+                                        <div>
+                                            <span class="image-slot-compare-label">Nova foto (prévia)</span>
+                                            <div class="image-preview" id="bannerImagePreview">
+                                                <span>Nenhum banner principal selecionado</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <label class="form-span">
+                                        Endereço da imagem
+                                        <input id="bannerImageInput" type="text" autocomplete="off" placeholder="/uploads/banner.jpg ou https://...">
+                                    </label>
+                                    <label class="form-span">
+                                        Ou escolha uma foto do dispositivo
+                                        <input id="bannerImageFile" type="file" accept="image/png,image/jpeg,image/webp">
+                                    </label>
+                                </div>
+                            </details>
 
                             <label>
                                 Título da campanha
@@ -1003,73 +1069,149 @@
                                 <textarea id="campaignDescriptionInput" rows="3" placeholder="Texto curto para promoção, coleção ou lançamento"></textarea>
                             </label>
 
-                            <label class="form-span">
-                                Imagem da campanha
-                                <input id="campaignImageInput" type="text" autocomplete="off" placeholder="/uploads/campanha.jpg ou https://...">
-                            </label>
-
-                            <label class="form-span">
-                                Foto da campanha do dispositivo
-                                <input id="campaignImageFile" type="file" accept="image/png,image/jpeg,image/webp">
-                            </label>
-
-                            <div class="image-preview form-span" id="campaignImagePreview">
-                                <span>Nenhuma campanha selecionada</span>
-                            </div>
-
-                            <div class="site-image-slots form-span">
-                                <label>
-                                    Título vitrine 1
-                                    <input id="lookbookTitle1Input" type="text" autocomplete="off" placeholder="Novidades">
-                                </label>
-                                <label>
-                                    Imagem vitrine 1
-                                    <input id="lookbookImage1Input" type="text" autocomplete="off" placeholder="/uploads/vitrine-1.jpg">
-                                </label>
-                                <label>
-                                    Upload vitrine 1
-                                    <input id="lookbookImage1File" type="file" accept="image/png,image/jpeg,image/webp">
-                                </label>
-                                <div class="image-preview" id="lookbookImage1Preview">
-                                    <span>Nenhuma imagem</span>
+                            <details class="image-slot form-span" data-image-slot="campaign">
+                                <summary>
+                                    <span class="image-slot-thumb" id="campaignCurrentThumb"><span>NM</span></span>
+                                    <span class="image-slot-info">
+                                        <strong>Foto da campanha</strong>
+                                        <small>Promoção ou lançamento em destaque</small>
+                                    </span>
+                                    <span class="image-slot-toggle">Trocar foto</span>
+                                </summary>
+                                <div class="image-slot-body">
+                                    <div class="image-slot-compare">
+                                        <div>
+                                            <span class="image-slot-compare-label">Foto atual</span>
+                                            <div class="image-preview" id="campaignCurrentPreview"><span>Nenhuma foto salva</span></div>
+                                        </div>
+                                        <div>
+                                            <span class="image-slot-compare-label">Nova foto (prévia)</span>
+                                            <div class="image-preview" id="campaignImagePreview">
+                                                <span>Nenhuma campanha selecionada</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <label class="form-span">
+                                        Endereço da imagem
+                                        <input id="campaignImageInput" type="text" autocomplete="off" placeholder="/uploads/campanha.jpg ou https://...">
+                                    </label>
+                                    <label class="form-span">
+                                        Ou escolha uma foto do dispositivo
+                                        <input id="campaignImageFile" type="file" accept="image/png,image/jpeg,image/webp">
+                                    </label>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="site-image-slots form-span">
-                                <label>
-                                    Título vitrine 2
-                                    <input id="lookbookTitle2Input" type="text" autocomplete="off" placeholder="Promoções">
-                                </label>
-                                <label>
-                                    Imagem vitrine 2
-                                    <input id="lookbookImage2Input" type="text" autocomplete="off" placeholder="/uploads/vitrine-2.jpg">
-                                </label>
-                                <label>
-                                    Upload vitrine 2
-                                    <input id="lookbookImage2File" type="file" accept="image/png,image/jpeg,image/webp">
-                                </label>
-                                <div class="image-preview" id="lookbookImage2Preview">
-                                    <span>Nenhuma imagem</span>
+                            <details class="image-slot form-span" data-image-slot="lookbook1">
+                                <summary>
+                                    <span class="image-slot-thumb" id="lookbookCurrentThumb1"><span>NM</span></span>
+                                    <span class="image-slot-info">
+                                        <strong>Foto da vitrine 1</strong>
+                                        <small id="lookbookSlotCaption1">Novidades</small>
+                                    </span>
+                                    <span class="image-slot-toggle">Trocar foto</span>
+                                </summary>
+                                <div class="image-slot-body">
+                                    <div class="image-slot-compare">
+                                        <div>
+                                            <span class="image-slot-compare-label">Foto atual</span>
+                                            <div class="image-preview" id="lookbookCurrentPreview1"><span>Nenhuma foto salva</span></div>
+                                        </div>
+                                        <div>
+                                            <span class="image-slot-compare-label">Nova foto (prévia)</span>
+                                            <div class="image-preview" id="lookbookImage1Preview">
+                                                <span>Nenhuma imagem</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <label>
+                                        Título da vitrine
+                                        <input id="lookbookTitle1Input" type="text" autocomplete="off" placeholder="Novidades">
+                                    </label>
+                                    <label>
+                                        Endereço da imagem
+                                        <input id="lookbookImage1Input" type="text" autocomplete="off" placeholder="/uploads/vitrine-1.jpg">
+                                    </label>
+                                    <label class="form-span">
+                                        Ou escolha uma foto do dispositivo
+                                        <input id="lookbookImage1File" type="file" accept="image/png,image/jpeg,image/webp">
+                                    </label>
                                 </div>
-                            </div>
+                            </details>
 
-                            <div class="site-image-slots form-span">
-                                <label>
-                                    Título vitrine 3
-                                    <input id="lookbookTitle3Input" type="text" autocomplete="off" placeholder="Mais desejados">
-                                </label>
-                                <label>
-                                    Imagem vitrine 3
-                                    <input id="lookbookImage3Input" type="text" autocomplete="off" placeholder="/uploads/vitrine-3.jpg">
-                                </label>
-                                <label>
-                                    Upload vitrine 3
-                                    <input id="lookbookImage3File" type="file" accept="image/png,image/jpeg,image/webp">
-                                </label>
-                                <div class="image-preview" id="lookbookImage3Preview">
-                                    <span>Nenhuma imagem</span>
+                            <details class="image-slot form-span" data-image-slot="lookbook2">
+                                <summary>
+                                    <span class="image-slot-thumb" id="lookbookCurrentThumb2"><span>NM</span></span>
+                                    <span class="image-slot-info">
+                                        <strong>Foto da vitrine 2</strong>
+                                        <small id="lookbookSlotCaption2">Promoções</small>
+                                    </span>
+                                    <span class="image-slot-toggle">Trocar foto</span>
+                                </summary>
+                                <div class="image-slot-body">
+                                    <div class="image-slot-compare">
+                                        <div>
+                                            <span class="image-slot-compare-label">Foto atual</span>
+                                            <div class="image-preview" id="lookbookCurrentPreview2"><span>Nenhuma foto salva</span></div>
+                                        </div>
+                                        <div>
+                                            <span class="image-slot-compare-label">Nova foto (prévia)</span>
+                                            <div class="image-preview" id="lookbookImage2Preview">
+                                                <span>Nenhuma imagem</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <label>
+                                        Título da vitrine
+                                        <input id="lookbookTitle2Input" type="text" autocomplete="off" placeholder="Promoções">
+                                    </label>
+                                    <label>
+                                        Endereço da imagem
+                                        <input id="lookbookImage2Input" type="text" autocomplete="off" placeholder="/uploads/vitrine-2.jpg">
+                                    </label>
+                                    <label class="form-span">
+                                        Ou escolha uma foto do dispositivo
+                                        <input id="lookbookImage2File" type="file" accept="image/png,image/jpeg,image/webp">
+                                    </label>
                                 </div>
-                            </div>
+                            </details>
+
+                            <details class="image-slot form-span" data-image-slot="lookbook3">
+                                <summary>
+                                    <span class="image-slot-thumb" id="lookbookCurrentThumb3"><span>NM</span></span>
+                                    <span class="image-slot-info">
+                                        <strong>Foto da vitrine 3</strong>
+                                        <small id="lookbookSlotCaption3">Mais desejados</small>
+                                    </span>
+                                    <span class="image-slot-toggle">Trocar foto</span>
+                                </summary>
+                                <div class="image-slot-body">
+                                    <div class="image-slot-compare">
+                                        <div>
+                                            <span class="image-slot-compare-label">Foto atual</span>
+                                            <div class="image-preview" id="lookbookCurrentPreview3"><span>Nenhuma foto salva</span></div>
+                                        </div>
+                                        <div>
+                                            <span class="image-slot-compare-label">Nova foto (prévia)</span>
+                                            <div class="image-preview" id="lookbookImage3Preview">
+                                                <span>Nenhuma imagem</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <label>
+                                        Título da vitrine
+                                        <input id="lookbookTitle3Input" type="text" autocomplete="off" placeholder="Mais desejados">
+                                    </label>
+                                    <label>
+                                        Endereço da imagem
+                                        <input id="lookbookImage3Input" type="text" autocomplete="off" placeholder="/uploads/vitrine-3.jpg">
+                                    </label>
+                                    <label class="form-span">
+                                        Ou escolha uma foto do dispositivo
+                                        <input id="lookbookImage3File" type="file" accept="image/png,image/jpeg,image/webp">
+                                    </label>
+                                </div>
+                            </details>
 
                             <button class="button button-primary form-action" type="submit">Salvar imagens do site</button>
                         </form>
@@ -1161,6 +1303,12 @@
                                 </label>
                             </div>
                             <label>
+                                Cliente (opcional)
+                                <select id="saleCustomer">
+                                    <option value="">Sem cliente</option>
+                                </select>
+                            </label>
+                            <label>
                                 Observação
                                 <input id="saleNote" type="text" autocomplete="off" placeholder="Ex: retirada na loja">
                             </label>
@@ -1220,20 +1368,31 @@
                 <section class="panel">
                     <div class="panel-header">
                         <h2>Valor por categoria</h2>
-                        <span class="panel-note">Custo e venda com base no estoque atual</span>
+                        <span class="panel-note">Custo e venda com base no estoque atual, por categoria e subcategoria</span>
+                    </div>
+                    <div class="category-value-board" id="stockCategoryBoard"></div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Estoque atual</h2>
+                            <span class="panel-note" id="stockDetailCount">0 itens</span>
+                        </div>
+                        <input class="search-input" id="stockDetailSearch" type="search" placeholder="Buscar produto, tamanho, cor ou código">
                     </div>
                     <div class="table-wrap">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Categoria</th>
-                                    <th>Produtos</th>
-                                    <th>Peças</th>
-                                    <th>Valor em custo</th>
-                                    <th>Valor em venda</th>
+                                    <th>Produto</th>
+                                    <th>Variação</th>
+                                    <th>Código</th>
+                                    <th>Quantidade</th>
+                                    <th>Valor em estoque</th>
                                 </tr>
                             </thead>
-                            <tbody id="stockValueByCategoryTable"></tbody>
+                            <tbody id="stockDetailTable"></tbody>
                         </table>
                     </div>
                 </section>
@@ -1406,7 +1565,7 @@
                     <section class="panel">
                         <div class="panel-header">
                             <div>
-                                <h2>Clientes da loja online</h2>
+                                <h2>Clientes</h2>
                                 <span class="panel-note" id="customerCount">0 clientes</span>
                             </div>
                             <input class="search-input" id="customerSearch" type="search" placeholder="Buscar nome, e-mail ou telefone">
@@ -1417,8 +1576,29 @@
 
                     <aside class="panel">
                         <div class="panel-header">
+                            <h2>Novo cliente</h2>
+                            <span class="panel-note">Cadastro rápido, sem login</span>
+                        </div>
+
+                        <form class="form-grid" id="customerForm">
+                            <label class="form-span">
+                                Nome
+                                <input id="customerNameInput" type="text" autocomplete="off" required>
+                            </label>
+                            <label>
+                                Telefone
+                                <input id="customerPhoneInput" type="tel" autocomplete="off" placeholder="(35) 99999-9999">
+                            </label>
+                            <label>
+                                E-mail (opcional)
+                                <input id="customerEmailInput" type="email" autocomplete="off" placeholder="Deixe vazio se não tiver">
+                            </label>
+                            <button class="button button-primary form-action" type="submit">Adicionar cliente</button>
+                        </form>
+
+                        <div class="panel-header">
                             <h2>Resumo dos clientes</h2>
-                            <span class="panel-note">Relacionamento</span>
+                            <span class="panel-note">Loja + online</span>
                         </div>
                         <div class="payment-summary" id="customerSummary"></div>
                     </aside>
@@ -1672,7 +1852,9 @@
         </form>
     </div>
 
+    <div class="label-print-area" id="labelPrintArea"></div>
+
     <script src="/barcode.js?v=20260829-1" defer></script>
-    <script src="/app.js?v=20260829-1" defer></script>
+    <script src="/app.js?v=20260829-2" defer></script>
 </body>
 </html>

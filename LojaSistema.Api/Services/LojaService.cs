@@ -41,6 +41,7 @@ public sealed class LojaService
     {
         Timeout = TimeSpan.FromMilliseconds(SmtpTimeoutMs)
     };
+    private const string DominioEmailPlaceholderCliente = "@sem-email.nanamodas.local";
     private const string MigracaoZerarEstoqueEntrega = "2026-07-06-zerar-estoque-entrega";
     private const string MigracaoRenomearEntregaLocal = "2026-07-06-renomear-entrega-local";
 
@@ -304,11 +305,6 @@ public sealed class LojaService
 
         lock (_sync)
         {
-            if (_categorias.Values.Any(categoria => string.Equals(categoria.Nome, nome, StringComparison.OrdinalIgnoreCase)))
-            {
-                return Resultado<Categoria>.Falha("Ja existe uma categoria com esse nome.");
-            }
-
             Guid? categoriaPaiId = null;
             if (!string.IsNullOrWhiteSpace(request.CategoriaPaiId))
             {
@@ -323,6 +319,13 @@ public sealed class LojaService
                 }
 
                 categoriaPaiId = paiId;
+            }
+
+            if (_categorias.Values.Any(categoria => categoria.CategoriaPaiId == categoriaPaiId && string.Equals(categoria.Nome, nome, StringComparison.OrdinalIgnoreCase)))
+            {
+                return Resultado<Categoria>.Falha(categoriaPaiId is null
+                    ? "Ja existe uma categoria principal com esse nome."
+                    : "Essa categoria pai ja tem uma subcategoria com esse nome.");
             }
 
             var categoria = new Categoria { Nome = nome, CategoriaPaiId = categoriaPaiId };
@@ -806,41 +809,117 @@ public sealed class LojaService
         }
     }
 
+    public IReadOnlyList<ClienteSimplesResponse> ListarClientesSimples()
+    {
+        lock (_sync)
+        {
+            return _clientes.Values
+                .OrderBy(cliente => cliente.Nome)
+                .Select(cliente => new ClienteSimplesResponse(cliente.Id, cliente.Nome, cliente.Telefone))
+                .ToList();
+        }
+    }
+
     public IReadOnlyList<ClientePainelResponse> ListarClientesPainel()
     {
         lock (_sync)
         {
             return _clientes.Values
-                .Select(cliente =>
-                {
-                    var pedidos = _pedidosOnline
-                        .Where(pedido =>
-                            pedido.ClienteId == cliente.Id ||
-                            string.Equals(pedido.EmailCliente, cliente.Email, StringComparison.OrdinalIgnoreCase))
-                        .OrderByDescending(pedido => pedido.CriadoEm)
-                        .ToList();
-                    var pedidosValidos = pedidos
-                        .Where(pedido => pedido.Status != StatusPedidoOnline.Cancelado)
-                        .ToList();
-                    var ultimoPedido = pedidos.FirstOrDefault();
-
-                    return new ClientePainelResponse(
-                        cliente.Id,
-                        cliente.Nome,
-                        cliente.Email,
-                        cliente.Telefone,
-                        pedidos.Count,
-                        pedidosValidos.Count,
-                        pedidosValidos.Sum(pedido => pedido.Total),
-                        ultimoPedido?.CriadoEm,
-                        ultimoPedido?.Status,
-                        cliente.CriadoEm,
-                        cliente.AtualizadoEm);
-                })
-                .OrderByDescending(cliente => cliente.UltimoPedidoEm ?? cliente.AtualizadoEm)
+                .Select(ConstruirClientePainelResponse)
+                .OrderByDescending(cliente => cliente.UltimaCompraEm ?? cliente.AtualizadoEm)
                 .ThenBy(cliente => cliente.Nome)
                 .ToList();
         }
+    }
+
+    public Resultado<ClientePainelResponse> CriarClientePainel(CriarClientePainelRequest request)
+    {
+        var nome = NormalizarTexto(request.Nome);
+        if (string.IsNullOrWhiteSpace(nome))
+        {
+            return Resultado<ClientePainelResponse>.Falha("Informe o nome do cliente.");
+        }
+
+        var telefone = NormalizarTextoOpcional(request.Telefone);
+        var emailInformado = NormalizarEmailOpcional(request.Email);
+        if (!string.IsNullOrWhiteSpace(request.Email) && emailInformado is null)
+        {
+            return Resultado<ClientePainelResponse>.Falha("Informe um e-mail valido ou deixe em branco.");
+        }
+
+        lock (_sync)
+        {
+            if (emailInformado is not null &&
+                _clientes.Values.Any(item => string.Equals(item.Email, emailInformado, StringComparison.OrdinalIgnoreCase)))
+            {
+                return Resultado<ClientePainelResponse>.Falha("Ja existe um cliente com esse e-mail.");
+            }
+
+            var email = emailInformado ?? $"cliente-{Guid.NewGuid():N}{DominioEmailPlaceholderCliente}";
+            var senhaAleatoria = Convert.ToBase64String(RandomNumberGenerator.GetBytes(18));
+
+            var cliente = new Cliente
+            {
+                Nome = nome,
+                Email = email,
+                Telefone = telefone,
+                SenhaHash = CriarHashSenha(senhaAleatoria)
+            };
+
+            _clientes[cliente.Id] = cliente;
+            SalvarTudo();
+            return Resultado<ClientePainelResponse>.Ok(ConstruirClientePainelResponse(cliente));
+        }
+    }
+
+    private ClientePainelResponse ConstruirClientePainelResponse(Cliente cliente)
+    {
+        var pedidos = _pedidosOnline
+            .Where(pedido =>
+                pedido.ClienteId == cliente.Id ||
+                string.Equals(pedido.EmailCliente, cliente.Email, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(pedido => pedido.CriadoEm)
+            .ToList();
+        var pedidosValidos = pedidos
+            .Where(pedido => pedido.Status != StatusPedidoOnline.Cancelado)
+            .ToList();
+        var ultimoPedido = pedidos.FirstOrDefault();
+
+        var vendasLoja = _vendasLoja
+            .Where(venda => venda.ClienteId == cliente.Id && !venda.Devolvida)
+            .OrderByDescending(venda => venda.CriadaEm)
+            .ToList();
+        var ultimaVendaLoja = vendasLoja.FirstOrDefault();
+
+        var origemUltimaCompra = (ultimoPedido?.CriadoEm, ultimaVendaLoja?.CriadaEm) switch
+        {
+            (null, null) => null,
+            (not null, null) => "Online",
+            (null, not null) => "Loja",
+            _ => ultimoPedido!.CriadoEm >= ultimaVendaLoja!.CriadaEm ? "Online" : "Loja"
+        };
+        var ultimaCompraEm = new[] { ultimoPedido?.CriadoEm, ultimaVendaLoja?.CriadaEm }
+            .Where(data => data.HasValue)
+            .Select(data => data!.Value)
+            .DefaultIfEmpty()
+            .Max();
+
+        return new ClientePainelResponse(
+            cliente.Id,
+            cliente.Nome,
+            cliente.Email.EndsWith(DominioEmailPlaceholderCliente, StringComparison.OrdinalIgnoreCase) ? null : cliente.Email,
+            cliente.Telefone,
+            pedidos.Count,
+            pedidosValidos.Count,
+            pedidosValidos.Sum(pedido => pedido.Total),
+            vendasLoja.Count,
+            vendasLoja.Sum(venda => venda.Total),
+            pedidosValidos.Sum(pedido => pedido.Total) + vendasLoja.Sum(venda => venda.Total),
+            ultimaCompraEm == default ? null : ultimaCompraEm,
+            origemUltimaCompra,
+            ultimoPedido?.Status,
+            cliente.CriadoEm,
+            cliente.AtualizadoEm);
     }
 
     public Resultado<LojaConfiguracaoResponse> AtualizarConfiguracaoLoja(AtualizarLojaConfiguracaoRequest request)
@@ -1390,8 +1469,16 @@ public sealed class LojaService
                 return Resultado<VendaLoja>.Falha("O valor recebido nao pode ser menor que o total em dinheiro.");
             }
 
+            Cliente? cliente = null;
+            if (request.ClienteId is Guid clienteId && !_clientes.TryGetValue(clienteId, out cliente))
+            {
+                return Resultado<VendaLoja>.Falha("Cliente nao encontrado.");
+            }
+
             var venda = new VendaLoja
             {
+                ClienteId = cliente?.Id,
+                ClienteNome = cliente?.Nome,
                 FormaPagamento = request.FormaPagamento,
                 Itens = itensVenda,
                 Desconto = desconto,
@@ -1559,6 +1646,8 @@ public sealed class LojaService
 
             var vendaTroca = new VendaLoja
             {
+                ClienteId = vendaOriginal.ClienteId,
+                ClienteNome = vendaOriginal.ClienteNome,
                 FormaPagamento = request.FormaPagamento,
                 Itens = itensVendaTroca,
                 Desconto = 0,
@@ -2651,6 +2740,8 @@ public sealed class LojaService
         GarantirColuna(connection, "VendasLoja", "Devolvida", "INTEGER NOT NULL DEFAULT 0");
         GarantirColuna(connection, "VendasLoja", "DevolvidaEm", "TEXT NULL");
         GarantirColuna(connection, "VendasLoja", "MotivoDevolucao", "TEXT NULL");
+        GarantirColuna(connection, "VendasLoja", "ClienteId", "TEXT NULL");
+        GarantirColuna(connection, "VendasLoja", "ClienteNome", "TEXT NULL");
 
         ExecuteNonQuery(connection, null, """
             CREATE TABLE IF NOT EXISTS PedidosOnline (
@@ -3269,6 +3360,8 @@ public sealed class LojaService
             var venda = new VendaLoja
             {
                 Id = ReadGuid(reader, "Id"),
+                ClienteId = ReadNullableGuid(reader, "ClienteId"),
+                ClienteNome = ReadNullableString(reader, "ClienteNome"),
                 FormaPagamento = ReadEnum(reader, "FormaPagamento", FormaPagamento.Pix),
                 Itens = DeserializeJson(ReadString(reader, "ItensJson"), new List<ItemVendaLoja>()),
                 Desconto = ReadDecimal(reader, "Desconto"),
@@ -3633,13 +3726,15 @@ public sealed class LojaService
     {
         using var command = CreateCommand(connection, transaction, """
             INSERT INTO VendasLoja (
-                Id, FormaPagamento, ItensJson, Desconto, ValorRecebido,
+                Id, ClienteId, ClienteNome, FormaPagamento, ItensJson, Desconto, ValorRecebido,
                 Observacao, Devolvida, DevolvidaEm, MotivoDevolucao, CriadaEm)
             VALUES (
-                $Id, $FormaPagamento, $ItensJson, $Desconto, $ValorRecebido,
+                $Id, $ClienteId, $ClienteNome, $FormaPagamento, $ItensJson, $Desconto, $ValorRecebido,
                 $Observacao, $Devolvida, $DevolvidaEm, $MotivoDevolucao, $CriadaEm);
             """);
         Add(command, "$Id", venda.Id);
+        Add(command, "$ClienteId", venda.ClienteId);
+        Add(command, "$ClienteNome", venda.ClienteNome);
         Add(command, "$FormaPagamento", venda.FormaPagamento);
         Add(command, "$ItensJson", SerializeJson(venda.Itens));
         Add(command, "$Desconto", venda.Desconto);
@@ -4125,7 +4220,17 @@ public sealed class LojaService
 
         lock (_sync)
         {
-            return _categorias.ContainsKey(categoriaId) ? null : "Categoria nao encontrada.";
+            if (!_categorias.ContainsKey(categoriaId))
+            {
+                return "Categoria nao encontrada.";
+            }
+
+            if (_categorias.Values.Any(categoria => categoria.CategoriaPaiId == categoriaId))
+            {
+                return "Essa categoria tem subcategorias. Escolha uma subcategoria especifica pro produto.";
+            }
+
+            return null;
         }
     }
 

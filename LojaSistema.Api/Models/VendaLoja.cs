@@ -3,6 +3,8 @@ namespace LojaSistema.Api.Models;
 public sealed class VendaLoja
 {
     public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid? ClienteId { get; init; }
+    public string? ClienteNome { get; init; }
     public required FormaPagamento FormaPagamento { get; init; }
     public required IReadOnlyList<ItemVendaLoja> Itens { get; init; }
     public decimal Desconto { get; init; }

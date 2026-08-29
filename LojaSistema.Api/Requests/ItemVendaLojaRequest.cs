@@ -7,7 +7,8 @@ public sealed record RegistrarVendaLojaRequest(
     IReadOnlyList<ItemVendaLojaRequest> Itens,
     decimal Desconto,
     decimal ValorRecebido,
-    string? Observacao);
+    string? Observacao,
+    Guid? ClienteId);
 
 public sealed record ItemVendaLojaRequest(
     Guid ProdutoId,

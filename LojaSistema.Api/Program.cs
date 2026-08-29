@@ -273,9 +273,26 @@ app.MapGet("/atividades-painel", (LojaService loja) =>
     return Results.Ok(loja.ListarAtividadesPainel());
 }).RequireAuthorization("AdminOnly");
 
+app.MapGet("/clientes-simples", (LojaService loja) =>
+{
+    return Results.Ok(loja.ListarClientesSimples());
+}).RequireAuthorization("CanUsePdv");
+
 app.MapGet("/clientes-painel", (LojaService loja) =>
 {
     return Results.Ok(loja.ListarClientesPainel());
+}).RequireAuthorization("AdminOnly");
+
+app.MapPost("/clientes-painel", (CriarClientePainelRequest request, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.CriarClientePainel(request);
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Cliente cadastrado", resultado.Valor!.Nome);
+    return Results.Created($"/clientes-painel/{resultado.Valor!.Id}", resultado.Valor);
 }).RequireAuthorization("AdminOnly");
 
 app.MapPost("/usuarios-painel", (CriarUsuarioPainelRequest request, LojaService loja) =>

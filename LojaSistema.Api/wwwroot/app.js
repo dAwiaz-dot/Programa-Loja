@@ -1,4 +1,5 @@
 const state = {
+    collapsedProductGroups: new Set(),
     categories: [],
     products: [],
     suppliers: [],
@@ -6,6 +7,7 @@ const state = {
     sales: [],
     orders: [],
     customers: [],
+    customersSimple: [],
     coupons: [],
     deliveryOptions: [],
     panelUsers: [],
@@ -17,6 +19,7 @@ const state = {
     cart: [],
     lastReceipt: null,
     productSearch: "",
+    stockDetailSearch: "",
     productCategoryFilter: "",
     productReturnRowId: null,
     storefrontSearch: "",
@@ -120,11 +123,26 @@ function cacheElements() {
     els.productionChecklist = document.querySelector("#productionChecklist");
     els.adminReadinessList = document.querySelector("#adminReadinessList");
 
+    els.metricTicketMedio = document.querySelector("#metricTicketMedio");
+    els.dashFaturamentoLoja = document.querySelector("#dashFaturamentoLoja");
+    els.dashFaturamentoOnline = document.querySelector("#dashFaturamentoOnline");
+    els.dashLucroEstimado = document.querySelector("#dashLucroEstimado");
+    els.dashProductsFoot = document.querySelector("#dashProductsFoot");
+    els.dashPedidosOnline = document.querySelector("#dashPedidosOnline");
+    els.dashTopProductName = document.querySelector("#dashTopProductName");
+    els.dashTopProductFoot = document.querySelector("#dashTopProductFoot");
+    els.dashTrendSvg = document.querySelector("#dashTrendSvg");
+    els.dashTrendWrap = document.querySelector("#dashTrendWrap");
+    els.dashTrendTooltip = document.querySelector("#dashTrendTooltip");
+    els.dashPaymentBars = document.querySelector("#dashPaymentBars");
+    els.dashRankList = document.querySelector("#dashRankList");
+
     els.productForm = document.querySelector("#productForm");
     els.productId = document.querySelector("#productId");
     els.productName = document.querySelector("#productName");
     els.productCategory = document.querySelector("#productCategory");
     els.productSku = document.querySelector("#productSku");
+    els.generateSkuButton = document.querySelector("#generateSkuButton");
     els.productPrice = document.querySelector("#productPrice");
     els.productCost = document.querySelector("#productCost");
     els.productInitialStock = document.querySelector("#productInitialStock");
@@ -152,7 +170,8 @@ function cacheElements() {
     els.productCategoryFilter = document.querySelector("#productCategoryFilter");
     els.productsTable = document.querySelector("#productsTable");
     els.productCount = document.querySelector("#productCount");
-    els.labelPrintBox = document.querySelector("#labelPrintBox");
+    els.labelPrintPreview = document.querySelector("#labelPrintPreview");
+    els.labelPrintArea = document.querySelector("#labelPrintArea");
 
     els.storefrontForm = document.querySelector("#storefrontForm");
     els.storefrontProductId = document.querySelector("#storefrontProductId");
@@ -305,6 +324,7 @@ function cacheElements() {
     els.saleReceived = document.querySelector("#saleReceived");
     els.saleChange = document.querySelector("#saleChange");
     els.saleNote = document.querySelector("#saleNote");
+    els.saleCustomer = document.querySelector("#saleCustomer");
     els.receiptBox = document.querySelector("#receiptBox");
     els.finishSaleButton = document.querySelector("#finishSaleButton");
 
@@ -316,7 +336,10 @@ function cacheElements() {
     els.stockMetricCostValue = document.querySelector("#stockMetricCostValue");
     els.stockMetricSaleValue = document.querySelector("#stockMetricSaleValue");
     els.stockMetricProfit = document.querySelector("#stockMetricProfit");
-    els.stockValueByCategoryTable = document.querySelector("#stockValueByCategoryTable");
+    els.stockCategoryBoard = document.querySelector("#stockCategoryBoard");
+    els.stockDetailSearch = document.querySelector("#stockDetailSearch");
+    els.stockDetailTable = document.querySelector("#stockDetailTable");
+    els.stockDetailCount = document.querySelector("#stockDetailCount");
     els.stockSizeWrap = document.querySelector("#stockSizeWrap");
     els.stockColorWrap = document.querySelector("#stockColorWrap");
     els.stockModelWrap = document.querySelector("#stockModelWrap");
@@ -351,6 +374,10 @@ function cacheElements() {
     els.customerList = document.querySelector("#customerList");
     els.customerCount = document.querySelector("#customerCount");
     els.customerSummary = document.querySelector("#customerSummary");
+    els.customerForm = document.querySelector("#customerForm");
+    els.customerNameInput = document.querySelector("#customerNameInput");
+    els.customerPhoneInput = document.querySelector("#customerPhoneInput");
+    els.customerEmailInput = document.querySelector("#customerEmailInput");
 
     els.reportStartDate = document.querySelector("#reportStartDate");
     els.reportEndDate = document.querySelector("#reportEndDate");
@@ -396,6 +423,7 @@ function bindEvents() {
     els.addVariantRowButton.addEventListener("click", () => addProductVariantRow());
     els.variantQuickAddButton.addEventListener("click", applyVariantQuickAdd);
     els.productSku.addEventListener("input", refreshAutoVariantSkus);
+    els.generateSkuButton.addEventListener("click", generateProductSku);
     els.variantQuickAddInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
             event.preventDefault();
@@ -510,6 +538,11 @@ function bindEvents() {
         renderProductsTable();
     });
 
+    els.stockDetailSearch.addEventListener("input", (event) => {
+        state.stockDetailSearch = event.target.value;
+        renderStockDetailTable();
+    });
+
     els.storefrontSearch.addEventListener("input", (event) => {
         state.storefrontSearch = event.target.value;
         renderStorefront();
@@ -540,6 +573,8 @@ function bindEvents() {
         renderCustomers();
     });
 
+    els.customerForm.addEventListener("submit", saveCustomer);
+
     [els.reportStartDate, els.reportEndDate, els.reportChannelFilter, els.reportPaymentFilter].forEach((input) => {
         input.addEventListener("change", renderReports);
     });
@@ -561,6 +596,18 @@ function bindEvents() {
     });
 
     els.productsTable.addEventListener("click", async (event) => {
+        const groupToggle = event.target.closest("[data-group-toggle]");
+        if (groupToggle) {
+            const groupName = groupToggle.dataset.groupToggle;
+            if (state.collapsedProductGroups.has(groupName)) {
+                state.collapsedProductGroups.delete(groupName);
+            } else {
+                state.collapsedProductGroups.add(groupName);
+            }
+            renderProductsTable();
+            return;
+        }
+
         const button = event.target.closest("[data-action]");
         if (!button) {
             return;
@@ -586,7 +633,7 @@ function bindEvents() {
         }
     });
 
-    els.labelPrintBox.addEventListener("click", (event) => {
+    els.labelPrintPreview.addEventListener("click", (event) => {
         const button = event.target.closest("[data-label-action]");
         if (!button) {
             return;
@@ -597,8 +644,8 @@ function bindEvents() {
         }
 
         if (button.dataset.labelAction === "close") {
-            els.labelPrintBox.classList.add("hidden");
-            els.labelPrintBox.innerHTML = "";
+            els.labelPrintPreview.classList.add("hidden");
+            els.labelPrintPreview.innerHTML = "";
         }
     });
 
@@ -831,6 +878,7 @@ const stateLoaders = {
     sales: async () => { state.sales = can("usePdv") ? await api("/pdv/vendas") : []; },
     orders: async () => { state.orders = can("viewOnlineOrders") ? await api("/pedidos-online") : []; },
     customers: async () => { state.customers = can("viewCustomers") ? await api("/clientes-painel") : []; },
+    customersSimple: async () => { state.customersSimple = can("usePdv") ? await api("/clientes-simples") : []; },
     summary: async () => { state.summary = can("viewReports") ? await api("/relatorios/resumo") : null; },
     siteConfig: async () => { state.siteConfig = can("manageStorefront") ? await api("/loja-configuracao") : null; },
     coupons: async () => { state.coupons = can("manageStorefront") ? await api("/cupons") : []; },
@@ -869,6 +917,7 @@ const scopeRenderers = {
         ["viewReports", renderReports]
     ],
     customers: [["viewCustomers", renderCustomers]],
+    customersSimple: [["usePdv", renderPdvCustomerOptions]],
     summary: [["viewReports", renderReports]],
     siteConfig: [["manageStorefront", renderSiteConfig]],
     coupons: [["manageStorefront", renderCoupons]],
@@ -1006,6 +1055,7 @@ function renderAll() {
     if (can("usePdv")) {
         renderPdvProducts();
         renderCart();
+        renderPdvCustomerOptions();
     }
     if (can("manageStock")) {
         renderStock();
@@ -1132,6 +1182,162 @@ function renderDashboard() {
 
     renderProductionChecklist();
     renderAdminReadiness();
+    renderDashboardOverview(summary);
+}
+
+function renderDashboardOverview(summary) {
+    els.metricTicketMedio.textContent = currency.format(summary.ticketMedio || 0);
+    els.dashFaturamentoLoja.textContent = currency.format(summary.faturamentoLoja || 0);
+    els.dashFaturamentoOnline.textContent = currency.format(summary.faturamentoOnline || 0);
+    els.dashLucroEstimado.textContent = summary.lucroEstimado != null
+        ? `${currency.format(summary.lucroEstimado)} · ${(summary.margemLucroPercentual || 0).toFixed(1)}%`
+        : "—";
+    els.dashProductsFoot.textContent = `de ${summary.produtosCadastrados || 0} cadastrados`;
+    els.dashPedidosOnline.textContent = summary.pedidosOnline || 0;
+
+    if (summary.produtoMaisVendido) {
+        els.dashTopProductName.textContent = summary.produtoMaisVendido;
+        els.dashTopProductFoot.textContent = `${summary.quantidadeProdutoMaisVendido || 0} unidades`;
+    } else {
+        els.dashTopProductName.textContent = "—";
+        els.dashTopProductFoot.textContent = "sem dados no período";
+    }
+
+    renderDashboardTrend(summary.vendasPorDia || []);
+    renderDashboardPayments(summary.vendasPorPagamento || []);
+    renderDashboardRanking(summary.produtosMaisVendidos || []);
+}
+
+function renderDashboardTrend(vendasPorDiaDesc) {
+    const svg = els.dashTrendSvg;
+    svg.innerHTML = "";
+
+    const days = vendasPorDiaDesc.slice().reverse();
+    if (!days.length) {
+        els.dashTrendWrap.insertAdjacentHTML("beforeend", `<div class="empty-state" style="color:var(--dash-muted)">Sem vendas no período.</div>`);
+        return;
+    }
+    els.dashTrendWrap.querySelector(".empty-state")?.remove();
+
+    const W = 640, H = 220, padL = 24, padR = 26, padT = 14, padB = 26;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const maxVal = Math.max(...days.map((d) => d.faturamento), 1) * 1.15;
+
+    const x = (i) => padL + (days.length > 1 ? (i / (days.length - 1)) * plotW : plotW / 2);
+    const y = (v) => padT + plotH - (v / maxVal) * plotH;
+    const ns = "http://www.w3.org/2000/svg";
+    const el = (tag, attrs) => {
+        const e = document.createElementNS(ns, tag);
+        Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v));
+        return e;
+    };
+
+    for (let g = 0; g <= 4; g++) {
+        const gy = padT + (plotH / 4) * g;
+        svg.appendChild(el("line", { x1: padL, x2: W - padR, y1: gy, y2: gy, stroke: "var(--dash-grid)", "stroke-width": 1 }));
+    }
+
+    const barW = Math.min((plotW / days.length) * 0.5, 28);
+    days.forEach((d, i) => {
+        const cx = x(i);
+        const barY = y(d.faturamento);
+        const h = (padT + plotH) - barY;
+        svg.appendChild(el("rect", { x: cx - barW / 2, y: barY, width: barW, height: Math.max(h, 2), rx: 4, ry: 4, fill: "var(--dash-s1)", opacity: 0.9 }));
+    });
+
+    const linePts = days.map((d, i) => `${x(i)},${y(d.lucro)}`).join(" ");
+    svg.appendChild(el("polyline", { points: linePts, fill: "none", stroke: "var(--dash-s2)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    days.forEach((d, i) => {
+        svg.appendChild(el("circle", { cx: x(i), cy: y(d.lucro), r: 3.5, fill: "var(--dash-s2)", stroke: "var(--dash-surface)", "stroke-width": 1.5 }));
+    });
+
+    const lastI = days.length - 1;
+    const lastLabel = el("text", { x: x(lastI) - 4, y: y(days[lastI].faturamento) - 8, fill: "var(--dash-s1)", "font-size": 11, "font-weight": 700, "text-anchor": "end" });
+    lastLabel.textContent = currency.format(days[lastI].faturamento);
+    svg.appendChild(lastLabel);
+    const lastLucroLabel = el("text", { x: x(lastI) - 4, y: y(days[lastI].lucro) - 8, fill: "var(--dash-s2)", "font-size": 11, "font-weight": 700, "text-anchor": "end" });
+    lastLucroLabel.textContent = currency.format(days[lastI].lucro);
+    svg.appendChild(lastLucroLabel);
+
+    days.forEach((d, i) => {
+        const isLast = i === days.length - 1;
+        if (i % 2 !== 0 && !isLast) return;
+        const label = el("text", { x: x(i), y: H - 6, fill: "var(--dash-muted)", "font-size": 10, "text-anchor": isLast ? "end" : "middle" });
+        label.textContent = formatDashDayLabel(d.data);
+        svg.appendChild(label);
+    });
+
+    const hitW = plotW / days.length;
+    const tooltip = els.dashTrendTooltip;
+    days.forEach((d, i) => {
+        const hit = el("rect", { x: x(i) - hitW / 2, y: padT, width: Math.max(hitW, 1), height: plotH, fill: "transparent", style: "cursor:pointer" });
+        hit.addEventListener("mouseenter", () => showTrendTooltip(d, i, x, y, W, H));
+        hit.addEventListener("mousemove", () => showTrendTooltip(d, i, x, y, W, H));
+        hit.addEventListener("mouseleave", () => tooltip.classList.remove("is-visible"));
+        svg.appendChild(hit);
+    });
+}
+
+function showTrendTooltip(d, i, x, y, W, H) {
+    const tooltip = els.dashTrendTooltip;
+    tooltip.style.left = `${(x(i) / W) * 100}%`;
+    tooltip.style.top = `${(y(Math.max(d.faturamento, d.lucro)) / H) * 100}%`;
+    tooltip.innerHTML = `
+        <strong>${escapeHtml(formatDashDayLabel(d.data))}</strong>
+        <div class="row"><span class="sw" style="background:var(--dash-s1)"></span>Faturamento&nbsp;${currency.format(d.faturamento)}</div>
+        <div class="row"><span class="sw" style="background:var(--dash-s2)"></span>Lucro&nbsp;${currency.format(d.lucro)}</div>
+    `;
+    tooltip.classList.add("is-visible");
+}
+
+function formatDashDayLabel(isoDate) {
+    if (!isoDate) return "";
+    const parts = isoDate.split("-");
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}` : isoDate;
+}
+
+function renderDashboardPayments(payments) {
+    if (!payments.length) {
+        els.dashPaymentBars.innerHTML = `<div class="empty-state">Nenhuma venda no período.</div>`;
+        return;
+    }
+
+    const colors = ["var(--dash-s1)", "var(--dash-s2)", "var(--dash-s3)", "#c98500"];
+    const maxVal = Math.max(...payments.map((p) => p.total));
+    const totalGeral = payments.reduce((sum, p) => sum + p.total, 0);
+
+    els.dashPaymentBars.innerHTML = payments.map((p, i) => {
+        const pct = totalGeral > 0 ? Math.round((p.total / totalGeral) * 100) : 0;
+        const width = maxVal > 0 ? Math.round((p.total / maxVal) * 100) : 0;
+        return `
+            <div>
+                <div class="dash-bar-row-top">
+                    <span class="name">${escapeHtml(formatPayment(p.formaPagamento))}</span>
+                    <span class="val">${currency.format(p.total)} · ${pct}%</span>
+                </div>
+                <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${width}%;background:${colors[i % colors.length]}"></div></div>
+            </div>
+        `;
+    }).join("");
+}
+
+function renderDashboardRanking(products) {
+    if (!products.length) {
+        els.dashRankList.innerHTML = `<div class="empty-state">Nenhum produto vendido no período.</div>`;
+        return;
+    }
+
+    const maxQty = Math.max(...products.map((p) => p.quantidade));
+    els.dashRankList.innerHTML = products.map((p, i) => `
+        <div class="dash-rank-row">
+            <span class="dash-rank-num">${i + 1}</span>
+            <div class="dash-rank-body">
+                <div class="dash-rank-name">${escapeHtml(p.produtoNome)}</div>
+                <div class="dash-rank-track"><div class="dash-rank-fill" style="width:${Math.round((p.quantidade / maxQty) * 100)}%"></div></div>
+            </div>
+            <div class="dash-rank-meta"><strong>${p.quantidade} un.</strong>${currency.format(p.total)}</div>
+        </div>
+    `).join("");
 }
 
 function renderProductionChecklist() {
@@ -1413,7 +1619,8 @@ function renderCategories() {
 
 function renderCategoryOptions() {
     const parents = state.categories.filter((category) => !category.categoriaPaiId);
-    const options = parents
+
+    const filterOptions = parents
         .map((category) => {
             const children = state.categories.filter((child) => child.categoriaPaiId === category.id);
             const own = `<option value="${category.id}">${escapeHtml(category.nome)}</option>`;
@@ -1424,11 +1631,25 @@ function renderCategoryOptions() {
         })
         .join("");
 
-    els.productCategory.innerHTML = options;
+    // Categoria principal com subcategoria não pode receber produto direto — só a subcategoria.
+    const assignOptions = parents
+        .map((category) => {
+            const children = state.categories.filter((child) => child.categoriaPaiId === category.id);
+            if (!children.length) {
+                return `<option value="${category.id}">${escapeHtml(category.nome)}</option>`;
+            }
+            const childOptions = children
+                .map((child) => `<option value="${child.id}">${escapeHtml(child.nome)}</option>`)
+                .join("");
+            return `<optgroup label="${escapeHtml(category.nome)}">${childOptions}</optgroup>`;
+        })
+        .join("");
+
+    els.productCategory.innerHTML = assignOptions;
 
     if (els.productCategoryFilter) {
         const currentFilter = els.productCategoryFilter.value;
-        els.productCategoryFilter.innerHTML = `<option value="">Todas as categorias</option>${options}`;
+        els.productCategoryFilter.innerHTML = `<option value="">Todas as categorias</option>${filterOptions}`;
         if ([...els.productCategoryFilter.options].some((option) => option.value === currentFilter)) {
             els.productCategoryFilter.value = currentFilter;
         }
@@ -1555,6 +1776,7 @@ function renderProductsTable() {
         const groupProducts = groups.get(groupName)
             .slice()
             .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR") || (a.cores?.[0] || "").localeCompare(b.cores?.[0] || "", "pt-BR"));
+        const isCollapsed = state.collapsedProductGroups.has(groupName);
 
         const rows = groupProducts.map((product) => {
             const margin = product.preco > 0 ? ((product.preco - (product.custo || 0)) / product.preco) * 100 : 0;
@@ -1581,7 +1803,7 @@ function renderProductsTable() {
                 : `<span class="product-thumb product-thumb-empty" ${primaryColor ? `style="background:${primaryColor}"` : ""}>${escapeHtml((product.nome || "?").charAt(0).toUpperCase())}</span>`;
 
             return `
-                <tr data-product-row="${product.id}">
+                <tr data-product-row="${product.id}" data-group-row="${escapeHtml(groupName)}"${isCollapsed ? ' class="hidden"' : ""}>
                     <td>${thumb}</td>
                     <td>
                         <strong>${escapeHtml(product.nome)}</strong>
@@ -1604,8 +1826,11 @@ function renderProductsTable() {
         }).join("");
 
         return `
-            <tr class="table-group-row">
-                <td colspan="7">${escapeHtml(groupName)} <span class="panel-note">· ${groupProducts.length} ${groupProducts.length === 1 ? "item" : "itens"}</span></td>
+            <tr class="table-group-row${isCollapsed ? " is-collapsed" : ""}" data-group-toggle="${escapeHtml(groupName)}">
+                <td colspan="7">
+                    <span class="table-group-arrow">▾</span>
+                    ${escapeHtml(groupName)} <span class="panel-note">· ${groupProducts.length} ${groupProducts.length === 1 ? "item" : "itens"}</span>
+                </td>
             </tr>
             ${rows}
         `;
@@ -1691,6 +1916,7 @@ function renderSiteConfig() {
     els.lookbookTitle3Input.value = config.vitrineImagem3Titulo || "";
     els.lookbookImage3Input.value = config.vitrineImagem3Url || "";
     renderSiteImagePreviews();
+    renderImageSlotCurrentPreviews(config);
     els.storeWhatsappInput.value = config.whatsappLoja || "";
     els.storeInstagramInput.value = config.instagramLoja || "";
     els.storeAddressInput.value = config.enderecoLoja || "";
@@ -1979,37 +2205,157 @@ function renderStockValueSummary() {
     els.stockMetricSaleValue.textContent = currency.format(totals.venda);
     els.stockMetricProfit.textContent = currency.format(totals.venda - totals.custo);
 
-    const byCategory = new Map();
+    renderStockCategoryBoard(activeProducts);
+}
+
+function renderStockCategoryBoard(activeProducts) {
+    const emptyEntry = () => ({ produtos: 0, pecas: 0, custo: 0, venda: 0 });
+
+    const directByCategory = new Map();
     activeProducts.forEach((product) => {
-        const key = product.categoria || "Sem categoria";
         const quantidade = Number(product.quantidadeEmEstoque || 0);
-        const entry = byCategory.get(key) || { produtos: 0, pecas: 0, custo: 0, venda: 0 };
+        const entry = directByCategory.get(product.categoriaId) || emptyEntry();
         entry.produtos += 1;
         entry.pecas += quantidade;
         entry.custo += quantidade * Number(product.custo || 0);
         entry.venda += quantidade * Number(product.preco || 0);
-        byCategory.set(key, entry);
+        directByCategory.set(product.categoriaId, entry);
     });
 
-    const rows = [...byCategory.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
+    const parents = state.categories.filter((category) => !category.categoriaPaiId);
 
-    els.stockValueByCategoryTable.innerHTML = rows.length
-        ? rows.map(([categoria, entry]) => `
-            <tr>
-                <td>${escapeHtml(categoria)}</td>
-                <td>${entry.produtos}</td>
-                <td>${entry.pecas}</td>
-                <td>${currency.format(entry.custo)}</td>
-                <td>${currency.format(entry.venda)}</td>
+    const groups = parents
+        .map((parent) => {
+            const children = state.categories
+                .filter((category) => category.categoriaPaiId === parent.id)
+                .map((child) => ({ category: child, ...(directByCategory.get(child.id) || emptyEntry()) }))
+                .filter((child) => child.produtos > 0);
+
+            const direct = directByCategory.get(parent.id) || emptyEntry();
+            const total = children.reduce((acc, child) => ({
+                produtos: acc.produtos + child.produtos,
+                pecas: acc.pecas + child.pecas,
+                custo: acc.custo + child.custo,
+                venda: acc.venda + child.venda
+            }), { ...direct });
+
+            return { category: parent, total, children };
+        })
+        .filter((group) => group.total.produtos > 0)
+        .sort((a, b) => b.total.venda - a.total.venda);
+
+    if (!groups.length) {
+        els.stockCategoryBoard.innerHTML = `<div class="empty-state">Nenhum produto ativo cadastrado.</div>`;
+        return;
+    }
+
+    const maxVenda = Math.max(...groups.map((group) => group.total.venda), 1);
+
+    els.stockCategoryBoard.innerHTML = groups.map((group) => {
+        const width = Math.max((group.total.venda / maxVenda) * 100, 4);
+        const childMax = Math.max(...group.children.map((child) => child.venda), 1);
+
+        return `
+            <div class="category-value-card">
+                <div class="category-value-head">
+                    <div>
+                        <strong>${escapeHtml(group.category.nome)}</strong>
+                        <span class="panel-note">${group.total.produtos} produto${group.total.produtos === 1 ? "" : "s"} · ${group.total.pecas} peça${group.total.pecas === 1 ? "" : "s"}</span>
+                    </div>
+                    <div class="category-value-numbers">
+                        <span>${currency.format(group.total.custo)} custo</span>
+                        <span>${currency.format(group.total.venda)} venda</span>
+                    </div>
+                </div>
+                <div class="category-value-bar"><span style="width:${width}%"></span></div>
+                ${group.children.length ? `
+                    <div class="category-value-subrows">
+                        ${group.children
+                            .sort((a, b) => b.venda - a.venda)
+                            .map((child) => `
+                                <div class="category-value-subrow">
+                                    <span class="category-value-subname">${escapeHtml(child.category.nome)}</span>
+                                    <div class="category-value-subbar"><span style="width:${Math.max((child.venda / childMax) * 100, 4)}%"></span></div>
+                                    <span class="category-value-subnums">${child.pecas} un. · ${currency.format(child.custo)} custo · ${currency.format(child.venda)} venda</span>
+                                </div>
+                            `).join("")}
+                    </div>
+                ` : ""}
+            </div>
+        `;
+    }).join("");
+}
+
+function buildStockRows() {
+    const rows = [];
+
+    state.products.forEach((product) => {
+        if (product.variacoesEstoque?.length) {
+            product.variacoesEstoque.forEach((variation) => {
+                rows.push({
+                    productId: product.id,
+                    nome: product.nome,
+                    variacao: [variation.tamanho, variation.cor].filter(Boolean).join(" · ") || "—",
+                    sku: variation.sku || product.sku || "—",
+                    quantidade: Number(variation.quantidade || 0),
+                    custo: Number(product.custo || 0),
+                    preco: Number(product.preco || 0),
+                    ativo: product.ativo
+                });
+            });
+            return;
+        }
+
+        rows.push({
+            productId: product.id,
+            nome: product.nome,
+            variacao: "—",
+            sku: product.sku || "—",
+            quantidade: Number(product.quantidadeEmEstoque || 0),
+            custo: Number(product.custo || 0),
+            preco: Number(product.preco || 0),
+            ativo: product.ativo
+        });
+    });
+
+    return rows;
+}
+
+function renderStockDetailTable() {
+    if (!els.stockDetailTable) {
+        return;
+    }
+
+    const term = normalize(state.stockDetailSearch);
+    const rows = buildStockRows()
+        .filter((row) => normalize(`${row.nome} ${row.variacao} ${row.sku}`).includes(term))
+        .sort((a, b) => a.quantidade - b.quantidade || a.nome.localeCompare(b.nome, "pt-BR"));
+
+    els.stockDetailCount.textContent = `${rows.length} ${rows.length === 1 ? "item" : "itens"}`;
+
+    els.stockDetailTable.innerHTML = rows.length
+        ? rows.map((row) => `
+            <tr${row.ativo ? "" : ' class="is-inactive"'}>
+                <td><strong>${escapeHtml(row.nome)}</strong>${row.ativo ? "" : ' <span class="badge badge-muted">Inativo</span>'}</td>
+                <td>${escapeHtml(row.variacao)}</td>
+                <td>${escapeHtml(row.sku)}</td>
+                <td>${stockQuantityBadge(row.quantidade)}</td>
+                <td>${currency.format(row.quantidade * row.custo)} custo · ${currency.format(row.quantidade * row.preco)} venda</td>
             </tr>
         `).join("")
-        : `<tr><td colspan="5"><div class="empty-state">Nenhum produto ativo cadastrado.</div></td></tr>`;
+        : `<tr><td colspan="5"><div class="empty-state">Nenhum item encontrado.</div></td></tr>`;
+}
+
+function stockQuantityBadge(quantidade) {
+    const className = quantidade <= 0 ? "badge badge-danger" : quantidade <= 3 ? "badge badge-warn" : "badge badge-ok";
+    return `<span class="${className}">${quantidade} un.</span>`;
 }
 
 function renderStock() {
     renderSuppliers();
     renderStockProductPicker();
     renderStockValueSummary();
+    renderStockDetailTable();
 
     const maxStock = Math.max(...state.products.map((product) => product.quantidadeEmEstoque), 1);
 
@@ -2246,53 +2592,85 @@ function renderOnlineOrderCard(order) {
                 `).join("")}
             </div>
 
-            <div class="online-order-tracking online-order-payment">
-                <label>
-                    Referência / comprovante
-                    <input type="text" value="${escapeHtml(order.referenciaPagamento || "")}" data-payment-reference="${order.id}" placeholder="ID Pix, NSU, link ou anotação">
-                </label>
-                <label>
-                    Observação do pagamento
-                    <textarea rows="2" data-payment-note="${order.id}" placeholder="Ex: comprovante recebido pelo WhatsApp">${escapeHtml(order.observacaoPagamento || "")}</textarea>
-                </label>
-                <label class="checkbox-line">
-                    <input type="checkbox" data-payment-confirm="${order.id}" ${order.pagamentoConfirmadoEm || order.status === "Pago" ? "checked" : ""}>
-                    Confirmado
-                </label>
-                ${order.pagamentoConfirmadoEm ? `<span>Pago em ${formatDate(order.pagamentoConfirmadoEm)}</span>` : order.pagamentoAtualizadoEm ? `<span>Atualizado em ${formatDate(order.pagamentoAtualizadoEm)}</span>` : ""}
-            </div>
+            <details class="online-order-collapse" ${order.status === "Recebido" ? "open" : ""}>
+                <summary>${escapeHtml(getOnlinePaymentSummary(order))}</summary>
+                <div class="online-order-tracking online-order-payment">
+                    <label>
+                        Referência / comprovante
+                        <input type="text" value="${escapeHtml(order.referenciaPagamento || "")}" data-payment-reference="${order.id}" placeholder="ID Pix, NSU, link ou anotação">
+                    </label>
+                    <label>
+                        Observação do pagamento
+                        <textarea rows="2" data-payment-note="${order.id}" placeholder="Ex: comprovante recebido pelo WhatsApp">${escapeHtml(order.observacaoPagamento || "")}</textarea>
+                    </label>
+                    <label class="checkbox-line">
+                        <input type="checkbox" data-payment-confirm="${order.id}" ${order.pagamentoConfirmadoEm || order.status === "Pago" ? "checked" : ""}>
+                        Confirmado
+                    </label>
+                    ${order.pagamentoConfirmadoEm ? `<span>Pago em ${formatDate(order.pagamentoConfirmadoEm)}</span>` : order.pagamentoAtualizadoEm ? `<span>Atualizado em ${formatDate(order.pagamentoAtualizadoEm)}</span>` : ""}
+                    <div class="online-order-save-row"><button class="button button-secondary" type="button" data-online-order-action="payment" data-id="${order.id}">Salvar pagamento</button></div>
+                </div>
+            </details>
 
-            <div class="online-order-tracking">
-                <label>
-                    Código de rastreio
-                    <input type="text" value="${escapeHtml(order.codigoRastreio || "")}" data-tracking-code="${order.id}" placeholder="Ex: BR123456789">
-                </label>
-                <label>
-                    Observação da entrega
-                    <textarea rows="2" data-tracking-note="${order.id}" placeholder="Ex: saiu para entrega hoje">${escapeHtml(order.observacaoEntrega || "")}</textarea>
-                </label>
-                ${order.rastreamentoAtualizadoEm ? `<span>Atualizado em ${formatDate(order.rastreamentoAtualizadoEm)}</span>` : ""}
-            </div>
+            ${["Separando", "Enviado", "Entregue"].includes(order.status) ? `
+                <details class="online-order-collapse" ${order.status === "Separando" || (order.status === "Enviado" && !order.codigoRastreio) ? "open" : ""}>
+                    <summary>${escapeHtml(getOnlineTrackingSummary(order))}</summary>
+                    <div class="online-order-tracking">
+                        <label>
+                            Código de rastreio
+                            <input type="text" value="${escapeHtml(order.codigoRastreio || "")}" data-tracking-code="${order.id}" placeholder="Ex: BR123456789">
+                        </label>
+                        <label>
+                            Observação da entrega
+                            <textarea rows="2" data-tracking-note="${order.id}" placeholder="Ex: saiu para entrega hoje">${escapeHtml(order.observacaoEntrega || "")}</textarea>
+                        </label>
+                        ${order.rastreamentoAtualizadoEm ? `<span>Atualizado em ${formatDate(order.rastreamentoAtualizadoEm)}</span>` : ""}
+                        <div class="online-order-save-row"><button class="button button-secondary" type="button" data-online-order-action="tracking" data-id="${order.id}">Salvar rastreio</button></div>
+                    </div>
+                </details>
+            ` : ""}
 
             <footer class="online-order-actions">
-                ${renderOrderStatusSelect(order, "online")}
                 <div class="online-order-action-grid">
                     ${renderOnlineOrderQuickActions(order)}
-                    <button class="button button-secondary" type="button" data-online-order-action="payment" data-id="${order.id}">Salvar pagamento</button>
-                    <button class="button button-secondary" type="button" data-online-order-action="tracking" data-id="${order.id}">Salvar rastreio</button>
                     <button class="button button-secondary" type="button" data-online-order-action="receipt" data-id="${order.id}">Comprovante</button>
                     <button class="button button-secondary" type="button" data-online-order-action="copy" data-id="${order.id}">Copiar resumo</button>
                 </div>
+                <details class="online-order-collapse online-order-manual-status">
+                    <summary>Mudar status manualmente</summary>
+                    ${renderOrderStatusSelect(order, "online")}
+                </details>
             </footer>
         </article>
     `;
+}
+
+function getOnlinePaymentSummary(order) {
+    if (order.pagamentoConfirmadoEm) {
+        return `Pagamento confirmado em ${formatDate(order.pagamentoConfirmadoEm)}`;
+    }
+    if (order.status !== "Recebido") {
+        return "Pagamento confirmado";
+    }
+    return "Pagamento — aguardando confirmação";
+}
+
+function getOnlineTrackingSummary(order) {
+    if (order.codigoRastreio) {
+        return `Rastreio: ${order.codigoRastreio}`;
+    }
+    return "Rastreio — ainda sem código";
 }
 
 function getOnlineOrderOperationNotes(order) {
     return [
         {
             ok: Boolean(order.pagamentoConfirmadoEm || ["Pago", "Separando", "Enviado", "Entregue"].includes(order.status)),
-            label: order.pagamentoConfirmadoEm ? `Pagamento confirmado ${formatDate(order.pagamentoConfirmadoEm)}` : "Pagamento pendente"
+            label: order.pagamentoConfirmadoEm
+                ? `Pagamento confirmado ${formatDate(order.pagamentoConfirmadoEm)}`
+                : ["Pago", "Separando", "Enviado", "Entregue"].includes(order.status)
+                    ? "Pagamento confirmado"
+                    : "Pagamento pendente"
         },
         {
             ok: Boolean(order.codigoRastreio || order.status !== "Enviado"),
@@ -2420,9 +2798,9 @@ function renderOnlineOrderReceipt(orderId) {
 function renderCustomers() {
     const customers = getFilteredCustomers();
     const totalCustomers = state.customers.length;
-    const customersWithOrders = state.customers.filter((customer) => customer.pedidos > 0).length;
-    const totalRevenue = state.customers.reduce((sum, customer) => sum + Number(customer.totalCompras || 0), 0);
-    const averageTicket = customersWithOrders > 0 ? totalRevenue / customersWithOrders : 0;
+    const customersWithPurchases = state.customers.filter((customer) => (customer.pedidosOnline > 0) || (customer.comprasLoja > 0)).length;
+    const totalRevenue = state.customers.reduce((sum, customer) => sum + Number(customer.totalGasto || 0), 0);
+    const averageTicket = customersWithPurchases > 0 ? totalRevenue / customersWithPurchases : 0;
 
     els.customerCount.textContent = `${customers.length} ${customers.length === 1 ? "cliente" : "clientes"}`;
     els.customerSummary.innerHTML = `
@@ -2431,11 +2809,11 @@ function renderCustomers() {
             <strong>${totalCustomers}</strong>
         </div>
         <div class="payment-item">
-            <span>Com pedidos</span>
-            <strong>${customersWithOrders}</strong>
+            <span>Com compra</span>
+            <strong>${customersWithPurchases}</strong>
         </div>
         <div class="payment-item">
-            <span>Total comprado</span>
+            <span>Total gasto (loja + online)</span>
             <strong>${currency.format(totalRevenue)}</strong>
         </div>
         <div class="payment-item">
@@ -2455,24 +2833,35 @@ function getFilteredCustomers() {
         .filter((customer) => {
             const searchable = normalize([
                 customer.nome,
-                customer.email,
-                customer.telefone,
-                customer.ultimoStatus ? formatOrderStatus(customer.ultimoStatus) : ""
+                customer.email || "",
+                customer.telefone || "",
+                customer.ultimoStatusOnline ? formatOrderStatus(customer.ultimoStatusOnline) : ""
             ].join(" "));
             return searchable.includes(term);
         })
         .slice()
         .sort((a, b) => {
-            const dateA = new Date(a.ultimoPedidoEm || a.atualizadoEm || a.criadoEm).getTime();
-            const dateB = new Date(b.ultimoPedidoEm || b.atualizadoEm || b.criadoEm).getTime();
+            const dateA = new Date(a.ultimaCompraEm || a.atualizadoEm || a.criadoEm).getTime();
+            const dateB = new Date(b.ultimaCompraEm || b.atualizadoEm || b.criadoEm).getTime();
             return dateB - dateA;
         });
 }
 
 function renderCustomerCard(customer) {
-    const lastStatus = customer.ultimoStatus ? formatOrderStatus(customer.ultimoStatus) : "Sem pedido";
-    const lastOrder = customer.ultimoPedidoEm ? formatDate(customer.ultimoPedidoEm) : "Ainda não comprou";
-    const statusClass = customer.ultimoStatus ? getOrderStatusClass(customer.ultimoStatus) : "badge-muted";
+    const hasPurchase = Boolean(customer.ultimaCompraEm);
+    const lastLabel = !hasPurchase
+        ? "Sem compra"
+        : customer.origemUltimaCompra === "Loja"
+            ? "Compra na loja"
+            : customer.ultimoStatusOnline
+                ? formatOrderStatus(customer.ultimoStatusOnline)
+                : "Pedido online";
+    const lastOrder = hasPurchase ? formatDate(customer.ultimaCompraEm) : "Ainda não comprou";
+    const statusClass = !hasPurchase
+        ? "badge-muted"
+        : customer.origemUltimaCompra === "Loja"
+            ? "badge-ok"
+            : getOrderStatusClass(customer.ultimoStatusOnline);
 
     return `
         <article class="customer-card">
@@ -2480,26 +2869,26 @@ function renderCustomerCard(customer) {
                 <div>
                     <span>Cliente</span>
                     <strong>${escapeHtml(customer.nome)}</strong>
-                    <small>${escapeHtml(customer.email)}${customer.telefone ? ` · ${escapeHtml(customer.telefone)}` : ""}</small>
+                    <small>${customer.email ? escapeHtml(customer.email) : "Sem e-mail"}${customer.telefone ? ` · ${escapeHtml(customer.telefone)}` : ""}</small>
                 </div>
-                <span class="badge ${statusClass}">${lastStatus}</span>
+                <span class="badge ${statusClass}">${lastLabel}</span>
             </div>
 
             <div class="customer-stats">
                 <div>
-                    <span>Pedidos</span>
-                    <strong>${customer.pedidos}</strong>
-                    <small>${customer.pedidosValidos} válidos</small>
+                    <span>Loja</span>
+                    <strong>${customer.comprasLoja} ${customer.comprasLoja === 1 ? "compra" : "compras"}</strong>
+                    <small>${currency.format(customer.totalLoja || 0)}</small>
                 </div>
                 <div>
-                    <span>Total comprado</span>
-                    <strong>${currency.format(customer.totalCompras || 0)}</strong>
-                    <small>Pedidos não cancelados</small>
+                    <span>Online</span>
+                    <strong>${customer.pedidosOnline} ${customer.pedidosOnline === 1 ? "pedido" : "pedidos"}</strong>
+                    <small>${customer.pedidosOnlineValidos} válidos · ${currency.format(customer.totalOnline || 0)}</small>
                 </div>
                 <div>
-                    <span>Último pedido</span>
-                    <strong>${lastOrder}</strong>
-                    <small>Cadastrado em ${formatDate(customer.criadoEm)}</small>
+                    <span>Total gasto</span>
+                    <strong>${currency.format(customer.totalGasto || 0)}</strong>
+                    <small>Última compra: ${lastOrder}</small>
                 </div>
             </div>
         </article>
@@ -3343,6 +3732,27 @@ async function saveSupplier(event) {
     }
 }
 
+async function saveCustomer(event) {
+    event.preventDefault();
+
+    try {
+        await api("/clientes-painel", {
+            method: "POST",
+            body: JSON.stringify({
+                nome: els.customerNameInput.value.trim(),
+                telefone: emptyToNull(els.customerPhoneInput.value),
+                email: emptyToNull(els.customerEmailInput.value)
+            })
+        });
+
+        els.customerForm.reset();
+        showToast("Cliente cadastrado.");
+        await refreshScoped(["customers", "customersSimple"]);
+    } catch (error) {
+        showToast(error.message);
+    }
+}
+
 async function saveStockEntry(event) {
     event.preventDefault();
 
@@ -3379,6 +3789,22 @@ async function saveStockEntry(event) {
     }
 }
 
+function renderPdvCustomerOptions() {
+    if (!els.saleCustomer) {
+        return;
+    }
+
+    const currentValue = els.saleCustomer.value;
+    const customers = state.customersSimple.slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    els.saleCustomer.innerHTML = [`<option value="">Sem cliente</option>`]
+        .concat(customers.map((customer) => `<option value="${customer.id}">${escapeHtml(customer.nome)}${customer.telefone ? ` · ${escapeHtml(customer.telefone)}` : ""}</option>`))
+        .join("");
+
+    if (customers.some((customer) => customer.id === currentValue)) {
+        els.saleCustomer.value = currentValue;
+    }
+}
+
 async function finishSale() {
     if (state.cart.length === 0) {
         return;
@@ -3408,6 +3834,7 @@ async function finishSale() {
                 desconto,
                 valorRecebido: valorRecebido || total,
                 observacao: emptyToNull(els.saleNote.value),
+                clienteId: emptyToNull(els.saleCustomer.value),
                 itens: state.cart.map((item) => ({
                     produtoId: item.produtoId,
                     quantidade: item.quantidade,
@@ -3423,8 +3850,9 @@ async function finishSale() {
         els.saleDiscount.value = "";
         els.saleReceived.value = "";
         els.saleNote.value = "";
+        els.saleCustomer.value = "";
         showToast("Venda finalizada e estoque atualizado.");
-        await refreshScoped(["products", "movements", "sales", "summary"]);
+        await refreshScoped(["products", "movements", "sales", "summary", "customers"]);
         renderReceipt(sale);
     } catch (error) {
         showToast(error.message);
@@ -3536,7 +3964,7 @@ async function submitReturnSale(event) {
             state.cart = [];
             showToast("Troca registrada e estoque atualizado.");
             closeReturnDialog();
-            await refreshScoped(["products", "movements", "sales", "summary"]);
+            await refreshScoped(["products", "movements", "sales", "summary", "customers"]);
             renderReceipt(response.vendaTroca);
             showView("pdv");
             return;
@@ -3552,7 +3980,7 @@ async function submitReturnSale(event) {
 
         showToast("Venda devolvida e estoque atualizado.");
         closeReturnDialog();
-        await refreshScoped(["products", "movements", "sales", "summary"]);
+        await refreshScoped(["products", "movements", "sales", "summary", "customers"]);
     } catch (error) {
         showToast(error.message || "Não foi possível devolver a venda.");
     }
@@ -3704,51 +4132,58 @@ function buildProductLabels(product) {
     }));
 }
 
+function buildLabelItemsHtml(labels) {
+    return labels.map((label) => `
+        <div class="label-item">
+            <strong class="label-item-name">${escapeHtml(label.nome)}</strong>
+            ${(label.tamanho || label.cor) ? `<span class="label-item-variation">${escapeHtml([label.tamanho, label.cor].filter(Boolean).join(" · "))}</span>` : ""}
+            <span class="label-item-price">${currency.format(label.preco)}</span>
+            ${label.sku ? `
+                ${window.buildBarcodeSvg?.(label.sku, { width: 132, height: 34 }) || ""}
+                <span class="label-item-sku">${escapeHtml(label.sku)}</span>
+            ` : ""}
+        </div>
+    `).join("");
+}
+
 function renderLabelPrintBox(product) {
     const labels = buildProductLabels(product);
 
     if (!labels.length) {
-        els.labelPrintBox.classList.add("hidden");
-        els.labelPrintBox.innerHTML = "";
+        els.labelPrintPreview.classList.add("hidden");
+        els.labelPrintPreview.innerHTML = "";
         return false;
     }
 
-    els.labelPrintBox.classList.remove("hidden");
-    els.labelPrintBox.innerHTML = `
+    els.labelPrintPreview.classList.remove("hidden");
+    els.labelPrintPreview.innerHTML = `
         <div class="label-print-head">
             <strong>${labels.length} etiqueta${labels.length === 1 ? "" : "s"} — ${escapeHtml(product.nome)}</strong>
             <span class="panel-note">1 etiqueta por unidade em estoque, 40x40mm</span>
         </div>
-        <div class="label-grid">
-            ${labels.map((label) => `
-                <div class="label-item">
-                    <strong class="label-item-name">${escapeHtml(label.nome)}</strong>
-                    ${(label.tamanho || label.cor) ? `<span class="label-item-variation">${escapeHtml([label.tamanho, label.cor].filter(Boolean).join(" · "))}</span>` : ""}
-                    <span class="label-item-price">${currency.format(label.preco)}</span>
-                    ${label.sku ? `
-                        ${window.buildBarcodeSvg?.(label.sku, { width: 132, height: 34 }) || ""}
-                        <span class="label-item-sku">${escapeHtml(label.sku)}</span>
-                    ` : ""}
-                </div>
-            `).join("")}
-        </div>
+        <div class="label-grid">${buildLabelItemsHtml(labels)}</div>
         <div class="label-print-actions">
             <button class="button button-secondary" type="button" data-label-action="close">Fechar</button>
             <button class="button button-primary" type="button" data-label-action="print">Imprimir etiquetas</button>
         </div>
     `;
 
-    els.labelPrintBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    els.labelPrintPreview.scrollIntoView({ behavior: "smooth", block: "nearest" });
     return true;
 }
 
 function printLabels() {
-    els.labelPrintBox.classList.add("is-printing");
+    const previewGrid = els.labelPrintPreview.querySelector(".label-grid");
+    if (!previewGrid) {
+        return;
+    }
+
+    els.labelPrintArea.innerHTML = `<div class="label-grid">${previewGrid.innerHTML}</div>`;
     document.body.classList.add("printing-labels");
     window.print();
     window.setTimeout(() => {
         document.body.classList.remove("printing-labels");
-        els.labelPrintBox.classList.remove("is-printing");
+        els.labelPrintArea.innerHTML = "";
     }, 300);
 }
 
@@ -4228,6 +4663,28 @@ function renderSiteImagePreviews() {
     renderSiteImageAdminPreview();
 }
 
+function renderImageSlotCurrentPreviews(config) {
+    const slots = [
+        { thumbId: "bannerCurrentThumb", previewId: "bannerCurrentPreview", url: config.bannerImagemUrl },
+        { thumbId: "campaignCurrentThumb", previewId: "campaignCurrentPreview", url: config.campanhaImagemUrl },
+        { thumbId: "lookbookCurrentThumb1", previewId: "lookbookCurrentPreview1", url: config.vitrineImagem1Url },
+        { thumbId: "lookbookCurrentThumb2", previewId: "lookbookCurrentPreview2", url: config.vitrineImagem2Url },
+        { thumbId: "lookbookCurrentThumb3", previewId: "lookbookCurrentPreview3", url: config.vitrineImagem3Url }
+    ];
+
+    slots.forEach((slot) => {
+        const url = String(slot.url || "").trim();
+        const thumb = document.getElementById(slot.thumbId);
+        const preview = document.getElementById(slot.previewId);
+        if (thumb) {
+            thumb.innerHTML = url ? `<img src="${escapeHtml(url)}" alt="Foto atual">` : "<span>NM</span>";
+        }
+        if (preview) {
+            preview.innerHTML = url ? `<img src="${escapeHtml(url)}" alt="Foto atual">` : "<span>Nenhuma foto salva</span>";
+        }
+    });
+}
+
 function setSiteImagePreview(preview, source, emptyMessage) {
     const normalized = String(source || "").trim();
     preview.innerHTML = normalized
@@ -4402,18 +4859,50 @@ function applyVariantQuickAdd() {
     els.variantQuickAddInput.focus();
 }
 
+function sanitizeSkuText(value) {
+    return (value || "")
+        .toUpperCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^A-Z0-9]+/g, "");
+}
+
 function buildVariantSku(baseSku, tamanho) {
     const base = (baseSku || "").trim();
     const size = (tamanho || "").trim();
     if (!base || !size) {
         return "";
     }
-    const suffix = size
-        .toUpperCase()
-        .normalize("NFD")
-        .replace(/[̀-ͯ]/g, "")
-        .replace(/[^A-Z0-9]+/g, "");
-    return suffix ? `${base}-${suffix}` : base;
+    const suffix = sanitizeSkuText(size);
+    return suffix ? `${base}${suffix}` : base;
+}
+
+function generateProductSku() {
+    const nome = els.productName.value.trim();
+    if (!nome) {
+        showToast("Preencha o nome do produto antes de gerar o código.");
+        return;
+    }
+
+    const base = sanitizeSkuText(nome).slice(0, 11) || "PRODUTO";
+    const prefix = "NM";
+    const editingId = els.productId.value;
+    const existingSkus = new Set(
+        state.products
+            .filter((product) => product.id !== editingId)
+            .map((product) => (product.sku || "").toUpperCase())
+            .filter(Boolean)
+    );
+
+    let candidate;
+    do {
+        const randomDigits = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
+        candidate = `${prefix}${base}${randomDigits}`;
+    } while (existingSkus.has(candidate));
+
+    els.productSku.value = candidate;
+    refreshAutoVariantSkus();
+    showToast(`Código gerado: ${candidate}`);
 }
 
 function addProductVariantRow(variation = {}) {
@@ -4426,7 +4915,6 @@ function addProductVariantRow(variation = {}) {
     row.innerHTML = `
         <input type="text" data-variant-field="tamanho" value="${escapeHtml(variation.tamanho || "")}" placeholder="P">
         <input type="text" data-variant-field="cor" value="${escapeHtml(variation.cor || "")}" placeholder="Preto">
-        <input type="text" data-variant-field="modelo" value="${escapeHtml(variation.modelo || "")}" placeholder="Básica">
         <input type="number" min="0" step="1" data-variant-field="quantidade" value="${Number(variation.quantidade || 0)}">
         <input type="text" data-variant-field="sku" value="${escapeHtml(variation.sku || autoSku)}" placeholder="Gerado automaticamente">
         <button class="button button-danger" type="button" data-variant-action="remove">Remover</button>
