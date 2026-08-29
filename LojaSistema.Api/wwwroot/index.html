@@ -280,41 +280,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-section form-span">
-                                <div class="form-section-title">
-                                    <span class="form-section-num">4</span>
-                                    Fotos do produto
-                                </div>
-                                <div class="form-section-grid">
-                                    <label class="form-span">
-                                        URL ou caminho da imagem
-                                        <input id="productImage" name="imagemUrl" type="text" placeholder="https://... ou /uploads/foto.png">
-                                    </label>
-
-                                    <div class="form-span">
-                                        <span class="upload-label">Foto principal</span>
-                                        <input class="file-input" id="productImageFile" type="file" accept="image/png,image/jpeg,image/webp">
-                                    </div>
-
-                                    <div class="image-preview form-span" id="productImagePreview">
-                                        <span>Nenhuma imagem selecionada</span>
-                                    </div>
-
-                                    <label class="form-span">
-                                        Fotos extras
-                                        <textarea id="productExtraImages" name="imagensExtras" rows="3" placeholder="/uploads/foto-2.png&#10;https://site.com/foto-3.jpg"></textarea>
-                                    </label>
-
-                                    <div class="form-span">
-                                        <span class="upload-label">Fotos extras do dispositivo</span>
-                                        <input class="file-input" id="productExtraImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple>
-                                    </div>
-
-                                    <div class="image-preview-grid form-span" id="productExtraImagePreview">
-                                        <span>Nenhuma foto extra selecionada</span>
-                                    </div>
-                                </div>
-                            </div>
+                            <span class="field-hint form-span">A foto do produto agora é cadastrada na aba Vitrine (Loja online), depois de salvar o produto aqui.</span>
 
                             <div class="product-form-footer form-span">
                                 <label class="checkbox-line">
@@ -325,6 +291,8 @@
                                 <button class="button button-primary form-action" type="submit">Salvar produto</button>
                             </div>
                         </form>
+
+                        <div class="label-print-box hidden" id="labelPrintBox"></div>
                     </section>
 
                     <section class="panel">
@@ -1704,6 +1672,7 @@
         </form>
     </div>
 
-    <script src="/app.js?v=20260825-1" defer></script>
+    <script src="/barcode.js?v=20260829-1" defer></script>
+    <script src="/app.js?v=20260829-1" defer></script>
 </body>
 </html>

@@ -140,18 +140,19 @@ function cacheElements() {
     els.variantQuickAddButton = document.querySelector("#variantQuickAddButton");
     els.productVariantStock = document.querySelector("#productVariantStock");
     els.productSizeGuide = document.querySelector("#productSizeGuide");
-    els.productImage = document.querySelector("#productImage");
-    els.productImageFile = document.querySelector("#productImageFile");
-    els.productImagePreview = document.querySelector("#productImagePreview");
-    els.productExtraImages = document.querySelector("#productExtraImages");
-    els.productExtraImageFiles = document.querySelector("#productExtraImageFiles");
-    els.productExtraImagePreview = document.querySelector("#productExtraImagePreview");
+    els.storefrontImage = document.querySelector("#storefrontImage");
+    els.storefrontImageFile = document.querySelector("#storefrontImageFile");
+    els.storefrontImagePreview = document.querySelector("#storefrontImagePreview");
+    els.storefrontExtraImages = document.querySelector("#storefrontExtraImages");
+    els.storefrontExtraImageFiles = document.querySelector("#storefrontExtraImageFiles");
+    els.storefrontExtraImagePreview = document.querySelector("#storefrontExtraImagePreview");
     els.productActive = document.querySelector("#productActive");
     els.cancelEditButton = document.querySelector("#cancelEditButton");
     els.productSearch = document.querySelector("#productSearch");
     els.productCategoryFilter = document.querySelector("#productCategoryFilter");
     els.productsTable = document.querySelector("#productsTable");
     els.productCount = document.querySelector("#productCount");
+    els.labelPrintBox = document.querySelector("#labelPrintBox");
 
     els.storefrontForm = document.querySelector("#storefrontForm");
     els.storefrontProductId = document.querySelector("#storefrontProductId");
@@ -411,18 +412,18 @@ function bindEvents() {
         button.closest("[data-variant-row]")?.remove();
         syncProductVariantTextarea();
     });
-    els.productImage.addEventListener("input", () => {
-        if (!els.productImageFile.files.length) {
-            setProductImagePreview(els.productImage.value);
+    els.storefrontImage.addEventListener("input", () => {
+        if (!els.storefrontImageFile.files.length) {
+            setStorefrontImagePreview(els.storefrontImage.value);
         }
     });
-    els.productImageFile.addEventListener("change", previewSelectedProductImage);
-    els.productExtraImages.addEventListener("input", () => {
-        if (!els.productExtraImageFiles.files.length) {
-            setProductExtraImagePreview(parseImageList(els.productExtraImages.value));
+    els.storefrontImageFile.addEventListener("change", previewSelectedStorefrontImage);
+    els.storefrontExtraImages.addEventListener("input", () => {
+        if (!els.storefrontExtraImageFiles.files.length) {
+            setStorefrontExtraImagePreview(parseImageList(els.storefrontExtraImages.value));
         }
     });
-    els.productExtraImageFiles.addEventListener("change", previewSelectedProductExtraImages);
+    els.storefrontExtraImageFiles.addEventListener("change", previewSelectedStorefrontExtraImages);
     els.storefrontForm.addEventListener("submit", saveStorefrontProduct);
     els.storefrontProductSelect.addEventListener("change", () => {
         const product = state.products.find((item) => item.id === els.storefrontProductSelect.value);
@@ -576,6 +577,28 @@ function bindEvents() {
 
         if (button.dataset.action === "delete") {
             await deleteProduct(product);
+        }
+
+        if (button.dataset.action === "labels") {
+            if (!renderLabelPrintBox(product)) {
+                showToast("Esse produto não tem unidades em estoque para gerar etiqueta.");
+            }
+        }
+    });
+
+    els.labelPrintBox.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-label-action]");
+        if (!button) {
+            return;
+        }
+
+        if (button.dataset.labelAction === "print") {
+            printLabels();
+        }
+
+        if (button.dataset.labelAction === "close") {
+            els.labelPrintBox.classList.add("hidden");
+            els.labelPrintBox.innerHTML = "";
         }
     });
 
@@ -1552,8 +1575,9 @@ function renderProductsTable() {
             ].filter(Boolean).join(" · ");
 
             const primaryColor = colorSwatchHex(product.cores?.[0]);
-            const thumb = product.imagemUrl
-                ? `<img class="product-thumb" src="${escapeHtml(product.imagemUrl)}" alt="${escapeHtml(product.nome)}">`
+            const thumbImage = getStorefrontImage(product);
+            const thumb = thumbImage
+                ? `<img class="product-thumb" src="${escapeHtml(thumbImage)}" alt="${escapeHtml(product.nome)}">`
                 : `<span class="product-thumb product-thumb-empty" ${primaryColor ? `style="background:${primaryColor}"` : ""}>${escapeHtml((product.nome || "?").charAt(0).toUpperCase())}</span>`;
 
             return `
@@ -1571,6 +1595,7 @@ function renderProductsTable() {
                     <td>
                         <div class="table-actions">
                             <button class="button button-secondary" type="button" data-action="edit" data-id="${product.id}" title="Editar produto">Editar</button>
+                            <button class="button button-secondary" type="button" data-action="labels" data-id="${product.id}" title="Imprimir etiquetas">Etiquetas</button>
                             <button class="button button-danger" type="button" data-action="delete" data-id="${product.id}" title="Excluir produto">Excluir</button>
                         </div>
                     </td>
@@ -1790,8 +1815,9 @@ function renderPdvProducts() {
             const cartQty = cartQuantity(product.id);
             const available = Math.max(product.quantidadeEmEstoque - cartQty, 0);
             const initials = product.nome.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase();
-            const image = product.imagemUrl
-                ? `<img src="${escapeHtml(product.imagemUrl)}" alt="${escapeHtml(product.nome)}">`
+            const pdvImage = getStorefrontImage(product);
+            const image = pdvImage
+                ? `<img src="${escapeHtml(pdvImage)}" alt="${escapeHtml(product.nome)}">`
                 : `<span>${escapeHtml(initials)}</span>`;
             const variationControls = renderPdvVariationControls(product);
 
@@ -2879,24 +2905,9 @@ async function saveProduct(event) {
 
     try {
         const editingId = els.productId.value;
-        let imagemUrl = emptyToNull(els.productImage.value);
-        let imagensExtras = parseImageList(els.productExtraImages.value);
-
-        if (els.productImageFile.files.length > 0) {
-            const upload = await uploadProductImage(els.productImageFile.files[0]);
-            imagemUrl = upload.imagemUrl;
-            els.productImage.value = imagemUrl;
-        }
-
-        if (els.productExtraImageFiles.files.length > 0) {
-            const uploads = await Promise.all(
-                Array.from(els.productExtraImageFiles.files).map((file) => uploadProductImage(file))
-            );
-            imagensExtras = mergeImageUrls(imagensExtras, uploads.map((upload) => upload.imagemUrl));
-            els.productExtraImages.value = imagensExtras.join("\n");
-        }
-
-        imagensExtras = mergeImageUrls(imagensExtras).filter((image) => image !== imagemUrl);
+        const existingProduct = editingId ? state.products.find((item) => item.id === editingId) : null;
+        const imagemUrl = existingProduct?.imagemUrl || null;
+        const imagensExtras = existingProduct?.imagensExtras || [];
 
         const variacoesEstoque = collectProductVariantRows();
         els.productVariantStock.value = formatVariantStockList(variacoesEstoque);
@@ -2928,7 +2939,7 @@ async function saveProduct(event) {
             });
             showToast("Produto atualizado.");
         } else {
-            await api("/produtos", {
+            const created = await api("/produtos", {
                 method: "POST",
                 body: JSON.stringify({
                     ...payload,
@@ -2936,6 +2947,7 @@ async function saveProduct(event) {
                 })
             });
             showToast("Produto cadastrado.");
+            renderLabelPrintBox(created);
         }
 
         const returnRowId = editingId ? state.productReturnRowId : null;
@@ -3663,6 +3675,83 @@ function printReceipt(target = els.receiptBox) {
     }, 300);
 }
 
+function buildProductLabels(product) {
+    if (!product) {
+        return [];
+    }
+
+    if (product.variacoesEstoque?.length) {
+        return product.variacoesEstoque.flatMap((variation) => {
+            const quantidade = Math.max(0, Math.floor(Number(variation.quantidade || 0)));
+            const sku = variation.sku || product.sku || "";
+            return Array.from({ length: quantidade }, () => ({
+                nome: product.nome,
+                preco: product.preco,
+                tamanho: variation.tamanho || "",
+                cor: variation.cor || "",
+                sku
+            }));
+        });
+    }
+
+    const quantidade = Math.max(0, Math.floor(Number(product.quantidadeEmEstoque || 0)));
+    return Array.from({ length: quantidade }, () => ({
+        nome: product.nome,
+        preco: product.preco,
+        tamanho: "",
+        cor: "",
+        sku: product.sku || ""
+    }));
+}
+
+function renderLabelPrintBox(product) {
+    const labels = buildProductLabels(product);
+
+    if (!labels.length) {
+        els.labelPrintBox.classList.add("hidden");
+        els.labelPrintBox.innerHTML = "";
+        return false;
+    }
+
+    els.labelPrintBox.classList.remove("hidden");
+    els.labelPrintBox.innerHTML = `
+        <div class="label-print-head">
+            <strong>${labels.length} etiqueta${labels.length === 1 ? "" : "s"} — ${escapeHtml(product.nome)}</strong>
+            <span class="panel-note">1 etiqueta por unidade em estoque, 40x40mm</span>
+        </div>
+        <div class="label-grid">
+            ${labels.map((label) => `
+                <div class="label-item">
+                    <strong class="label-item-name">${escapeHtml(label.nome)}</strong>
+                    ${(label.tamanho || label.cor) ? `<span class="label-item-variation">${escapeHtml([label.tamanho, label.cor].filter(Boolean).join(" · "))}</span>` : ""}
+                    <span class="label-item-price">${currency.format(label.preco)}</span>
+                    ${label.sku ? `
+                        ${window.buildBarcodeSvg?.(label.sku, { width: 132, height: 34 }) || ""}
+                        <span class="label-item-sku">${escapeHtml(label.sku)}</span>
+                    ` : ""}
+                </div>
+            `).join("")}
+        </div>
+        <div class="label-print-actions">
+            <button class="button button-secondary" type="button" data-label-action="close">Fechar</button>
+            <button class="button button-primary" type="button" data-label-action="print">Imprimir etiquetas</button>
+        </div>
+    `;
+
+    els.labelPrintBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    return true;
+}
+
+function printLabels() {
+    els.labelPrintBox.classList.add("is-printing");
+    document.body.classList.add("printing-labels");
+    window.print();
+    window.setTimeout(() => {
+        document.body.classList.remove("printing-labels");
+        els.labelPrintBox.classList.remove("is-printing");
+    }, 300);
+}
+
 function buildSaleReceiptText(sale) {
     const shortId = sale.id.slice(0, 8).toUpperCase();
     const items = sale.itens
@@ -3823,12 +3912,6 @@ function editProduct(product) {
     els.productModels.value = (product.modelos || []).join("\n");
     renderProductVariantRows(product.variacoesEstoque || []);
     els.productSizeGuide.value = product.guiaMedidas || "";
-    els.productImage.value = product.imagemUrl || "";
-    els.productImageFile.value = "";
-    setProductImagePreview(product.imagemUrl);
-    els.productExtraImages.value = (product.imagensExtras || []).join("\n");
-    els.productExtraImageFiles.value = "";
-    setProductExtraImagePreview(product.imagensExtras || []);
     els.productActive.checked = product.ativo;
     els.cancelEditButton.classList.remove("hidden");
     els.productName.focus();
@@ -3967,81 +4050,76 @@ function resetProductForm() {
     renderProductVariantRows([]);
     els.productSizeGuide.value = "";
     els.productActive.checked = true;
-    els.productImageFile.value = "";
-    setProductImagePreview(null);
-    els.productExtraImages.value = "";
-    els.productExtraImageFiles.value = "";
-    setProductExtraImagePreview([]);
     els.cancelEditButton.classList.add("hidden");
     if (state.categories[0]) {
         els.productCategory.value = state.categories[0].id;
     }
 }
 
-function previewSelectedProductImage() {
-    const file = els.productImageFile.files[0];
+function previewSelectedStorefrontImage() {
+    const file = els.storefrontImageFile.files[0];
     if (!file) {
-        setProductImagePreview(els.productImage.value);
+        setStorefrontImagePreview(els.storefrontImage.value);
         return;
     }
 
     if (!isAcceptedImageFile(file)) {
-        els.productImageFile.value = "";
+        els.storefrontImageFile.value = "";
         showToast("Escolha uma imagem JPG, PNG ou WebP de até 5 MB.");
         return;
     }
 
     const objectUrl = URL.createObjectURL(file);
-    setProductImagePreview(objectUrl, true);
+    setStorefrontImagePreview(objectUrl, true);
 }
 
-function setProductImagePreview(source, isObjectUrl = false) {
-    if (productImageObjectUrl && productImageObjectUrl !== source) {
-        URL.revokeObjectURL(productImageObjectUrl);
-        productImageObjectUrl = null;
+function setStorefrontImagePreview(source, isObjectUrl = false) {
+    if (storefrontImageObjectUrl && storefrontImageObjectUrl !== source) {
+        URL.revokeObjectURL(storefrontImageObjectUrl);
+        storefrontImageObjectUrl = null;
     }
 
     if (isObjectUrl) {
-        productImageObjectUrl = source;
+        storefrontImageObjectUrl = source;
     }
 
     if (!source) {
-        els.productImagePreview.innerHTML = "<span>Nenhuma imagem selecionada</span>";
+        els.storefrontImagePreview.innerHTML = "<span>Nenhuma imagem do site selecionada</span>";
         return;
     }
 
-    els.productImagePreview.innerHTML = `<img src="${escapeHtml(source)}" alt="Prévia da imagem do produto">`;
+    els.storefrontImagePreview.innerHTML = `<img src="${escapeHtml(source)}" alt="Prévia da imagem do site">`;
 }
 
-function previewSelectedProductExtraImages() {
-    const files = Array.from(els.productExtraImageFiles.files);
+function previewSelectedStorefrontExtraImages() {
+    const files = Array.from(els.storefrontExtraImageFiles.files);
     if (!files.length) {
-        setProductExtraImagePreview(parseImageList(els.productExtraImages.value));
+        setStorefrontExtraImagePreview(parseImageList(els.storefrontExtraImages.value));
         return;
     }
 
     if (files.some((file) => !isAcceptedImageFile(file))) {
-        els.productExtraImageFiles.value = "";
+        els.storefrontExtraImageFiles.value = "";
         showToast("Escolha imagens JPG, PNG ou WebP de até 5 MB.");
         return;
     }
 
     const objectUrls = files.map((file) => URL.createObjectURL(file));
-    setProductExtraImagePreview(mergeImageUrls(parseImageList(els.productExtraImages.value), objectUrls), objectUrls);
+    setStorefrontExtraImagePreview(mergeImageUrls(parseImageList(els.storefrontExtraImages.value), objectUrls), objectUrls);
 }
 
-function setProductExtraImagePreview(sources, objectUrls = []) {
-    productExtraImageObjectUrls.forEach((source) => URL.revokeObjectURL(source));
-    productExtraImageObjectUrls = objectUrls;
+function setStorefrontExtraImagePreview(sources, objectUrls = []) {
+    storefrontExtraImageObjectUrls.forEach((source) => URL.revokeObjectURL(source));
+    storefrontExtraImageObjectUrls = objectUrls;
 
     const images = mergeImageUrls(sources);
     if (!images.length) {
-        els.productExtraImagePreview.innerHTML = "<span>Nenhuma foto extra selecionada</span>";
+        els.storefrontExtraImagePreview.innerHTML = "<span>Nenhuma foto extra do site selecionada</span>";
         return;
     }
 
-    els.productExtraImagePreview.innerHTML = images
-        .map((source) => `<img src="${escapeHtml(source)}" alt="Prévia de foto extra do produto">`)
+    els.storefrontExtraImagePreview.innerHTML = images
+        .map((source) => `<img src="${escapeHtml(source)}" alt="Prévia de foto extra do site">`)
         .join("");
 }
 
