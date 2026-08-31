@@ -151,7 +151,6 @@ function cacheElements() {
     els.productDescription = document.querySelector("#productDescription");
     els.productSizes = document.querySelector("#productSizes");
     els.productColors = document.querySelector("#productColors");
-    els.productModels = document.querySelector("#productModels");
     els.productVariantRows = document.querySelector("#productVariantRows");
     els.addVariantRowButton = document.querySelector("#addVariantRowButton");
     els.variantQuickAddInput = document.querySelector("#variantQuickAddInput");
@@ -3312,7 +3311,7 @@ async function saveProduct(event) {
             imagensExtras,
             tamanhos: parseTextList(els.productSizes.value),
             cores: parseTextList(els.productColors.value),
-            modelos: parseTextList(els.productModels.value),
+            modelos: [],
             variacoesEstoque,
             guiaMedidas: emptyToNull(els.productSizeGuide.value)
         };
@@ -4344,7 +4343,6 @@ function editProduct(product) {
     els.productDescription.value = product.descricao || "";
     els.productSizes.value = (product.tamanhos || []).join("\n");
     els.productColors.value = (product.cores || []).join("\n");
-    els.productModels.value = (product.modelos || []).join("\n");
     renderProductVariantRows(product.variacoesEstoque || []);
     els.productSizeGuide.value = product.guiaMedidas || "";
     els.productActive.checked = product.ativo;
@@ -4481,7 +4479,6 @@ function resetProductForm() {
     els.productCost.value = "";
     els.productSizes.value = "";
     els.productColors.value = "";
-    els.productModels.value = "";
     renderProductVariantRows([]);
     els.productSizeGuide.value = "";
     els.productActive.checked = true;
