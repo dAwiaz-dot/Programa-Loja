@@ -4158,7 +4158,7 @@ function renderLabelPrintBox(product) {
     els.labelPrintPreview.innerHTML = `
         <div class="label-print-head">
             <strong>${labels.length} etiqueta${labels.length === 1 ? "" : "s"} — ${escapeHtml(product.nome)}</strong>
-            <span class="panel-note">1 etiqueta por unidade em estoque, 80x40mm</span>
+            <span class="panel-note">1 etiqueta por unidade em estoque, 80x210mm</span>
         </div>
         <div class="label-grid">${buildLabelItemsHtml(labels)}</div>
         <div class="label-print-actions">

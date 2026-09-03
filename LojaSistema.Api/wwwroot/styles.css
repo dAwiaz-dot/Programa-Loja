@@ -1997,11 +1997,11 @@ footer.online-order-actions {
 .label-item {
     display: grid;
     justify-items: center;
-    align-content: center;
-    gap: 4px;
+    align-content: start;
+    gap: 6px;
     width: 80mm;
-    height: 40mm;
-    padding: 3mm 4mm;
+    height: 210mm;
+    padding: 6mm 6mm;
     box-sizing: border-box;
     border: 1px dashed var(--line);
     border-radius: 6px;
@@ -2334,7 +2334,7 @@ footer.online-order-actions {
     }
 
     @page {
-        size: 80mm 40mm;
+        size: 80mm 210mm;
         margin: 0;
     }
 }
