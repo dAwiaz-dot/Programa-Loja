@@ -4138,7 +4138,7 @@ function buildLabelItemsHtml(labels) {
             ${(label.tamanho || label.cor) ? `<span class="label-item-variation">${escapeHtml([label.tamanho, label.cor].filter(Boolean).join(" · "))}</span>` : ""}
             <span class="label-item-price">${currency.format(label.preco)}</span>
             ${label.sku ? `
-                ${window.buildBarcodeSvg?.(label.sku, { width: 240, height: 50 }) || ""}
+                ${window.buildBarcodeSvg?.(label.sku, { width: 220, height: 38 }) || ""}
                 <span class="label-item-sku">${escapeHtml(label.sku)}</span>
             ` : ""}
         </div>
@@ -4158,7 +4158,7 @@ function renderLabelPrintBox(product) {
     els.labelPrintPreview.innerHTML = `
         <div class="label-print-head">
             <strong>${labels.length} etiqueta${labels.length === 1 ? "" : "s"} — ${escapeHtml(product.nome)}</strong>
-            <span class="panel-note">1 etiqueta por unidade em estoque, 80x210mm</span>
+            <span class="panel-note">1 etiqueta por unidade em estoque, 80x35mm</span>
         </div>
         <div class="label-grid">${buildLabelItemsHtml(labels)}</div>
         <div class="label-print-actions">

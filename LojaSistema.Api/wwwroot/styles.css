@@ -1997,11 +1997,11 @@ footer.online-order-actions {
 .label-item {
     display: grid;
     justify-items: center;
-    align-content: start;
-    gap: 6px;
+    align-content: center;
+    gap: 3px;
     width: 80mm;
-    height: 210mm;
-    padding: 6mm 6mm;
+    height: 35mm;
+    padding: 2mm 4mm;
     box-sizing: border-box;
     border: 1px dashed var(--line);
     border-radius: 6px;
@@ -2012,31 +2012,31 @@ footer.online-order-actions {
 }
 
 .label-item-name {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.15;
     max-width: 100%;
     overflow-wrap: anywhere;
 }
 
 .label-item-variation {
-    font-size: 13px;
+    font-size: 10px;
     color: #444;
 }
 
 .label-item-price {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 700;
 }
 
 .label-item .barcode-svg {
     width: 100%;
     max-width: 64mm;
-    height: 13mm;
+    height: 10mm;
 }
 
 .label-item-sku {
-    font-size: 12px;
+    font-size: 9px;
     letter-spacing: 0.5px;
     color: #222;
 }
@@ -2334,7 +2334,7 @@ footer.online-order-actions {
     }
 
     @page {
-        size: 80mm 210mm;
+        size: 80mm 35mm;
         margin: 0;
     }
 }
