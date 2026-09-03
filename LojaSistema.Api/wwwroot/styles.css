@@ -1990,7 +1990,7 @@ footer.online-order-actions {
 
 .label-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 10px;
 }
 
@@ -1998,10 +1998,10 @@ footer.online-order-actions {
     display: grid;
     justify-items: center;
     align-content: center;
-    gap: 3px;
-    width: 40mm;
+    gap: 4px;
+    width: 80mm;
     height: 40mm;
-    padding: 2mm;
+    padding: 3mm 4mm;
     box-sizing: border-box;
     border: 1px dashed var(--line);
     border-radius: 6px;
@@ -2012,30 +2012,31 @@ footer.online-order-actions {
 }
 
 .label-item-name {
-    font-size: 11px;
+    font-size: 16px;
+    font-weight: 700;
     line-height: 1.2;
     max-width: 100%;
     overflow-wrap: anywhere;
 }
 
 .label-item-variation {
-    font-size: 10px;
+    font-size: 13px;
     color: #444;
 }
 
 .label-item-price {
-    font-size: 13px;
+    font-size: 18px;
     font-weight: 700;
 }
 
 .label-item .barcode-svg {
     width: 100%;
-    max-width: 34mm;
-    height: 9mm;
+    max-width: 64mm;
+    height: 13mm;
 }
 
 .label-item-sku {
-    font-size: 9px;
+    font-size: 12px;
     letter-spacing: 0.5px;
     color: #222;
 }
@@ -2333,7 +2334,7 @@ footer.online-order-actions {
     }
 
     @page {
-        size: 40mm 40mm;
+        size: 80mm 40mm;
         margin: 0;
     }
 }
