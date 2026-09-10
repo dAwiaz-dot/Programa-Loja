@@ -1398,6 +1398,37 @@
                     </div>
                 </section>
 
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Importar nota fiscal</h2>
+                            <span class="panel-note">Lê o XML da NF-e e sugere a entrada de cada produto no estoque</span>
+                        </div>
+                    </div>
+
+                    <div class="import-upload-row">
+                        <label class="button button-secondary import-upload-button">
+                            Escolher XML da nota
+                            <input type="file" id="notaImportFile" accept=".xml,text/xml" hidden>
+                        </label>
+                        <span class="panel-note" id="notaImportFileName">Nenhum arquivo selecionado.</span>
+                    </div>
+
+                    <div id="notaImportResult" class="hidden">
+                        <div class="config-note" id="notaImportSummary"></div>
+
+                        <div class="import-item-list" id="notaImportItems"></div>
+
+                        <div class="import-confirm-row">
+                            <label>
+                                Fornecedor (opcional)
+                                <select id="notaImportSupplier"></select>
+                            </label>
+                            <button class="button button-primary" type="button" id="notaImportConfirmButton">Confirmar importação</button>
+                        </div>
+                    </div>
+                </section>
+
                 <div class="workspace-grid workspace-grid-wide">
                     <section class="panel">
                         <div class="panel-header">

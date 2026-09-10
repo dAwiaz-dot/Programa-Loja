@@ -349,6 +349,7 @@ app.MapGet("/api", () => Results.Ok(new
         "POST /produtos/imagem",
         "POST /produtos/{id}/estoque/entrada",
         "GET /estoque/movimentacoes",
+        "POST /estoque/importar-nota/preview",
         "POST /pdv/vendas",
         "GET /pdv/vendas",
         "POST /pdv/vendas/{id}/devolucao",
@@ -732,6 +733,37 @@ app.MapPost("/produtos/{id:guid}/estoque/entrada", (Guid id, EntradaEstoqueReque
 app.MapGet("/estoque/movimentacoes", (LojaService loja) =>
 {
     return Results.Ok(loja.ListarMovimentacoesEstoque());
+}).RequireAuthorization("CanManageStock");
+
+app.MapPost("/estoque/importar-nota/preview", async (HttpRequest request, LojaService loja) =>
+{
+    if (!request.HasFormContentType)
+    {
+        return Results.BadRequest(new { erro = "Envie o arquivo usando formulario multipart." });
+    }
+
+    var form = await request.ReadFormAsync();
+    var arquivo = form.Files["arquivo"];
+    if (arquivo is null || arquivo.Length == 0)
+    {
+        return Results.BadRequest(new { erro = "Selecione o arquivo XML da nota fiscal." });
+    }
+
+    const long tamanhoMaximo = 5 * 1024 * 1024;
+    if (arquivo.Length > tamanhoMaximo)
+    {
+        return Results.BadRequest(new { erro = "O arquivo deve ter no maximo 5 MB." });
+    }
+
+    var extensao = Path.GetExtension(arquivo.FileName).ToLowerInvariant();
+    if (extensao != ".xml")
+    {
+        return Results.BadRequest(new { erro = "Envie o arquivo XML da NF-e (baixado do fornecedor ou do portal da nota)." });
+    }
+
+    await using var stream = arquivo.OpenReadStream();
+    var resultado = loja.LerPreviewNotaFiscalXml(stream);
+    return resultado.Sucesso ? Results.Ok(resultado.Valor) : Results.BadRequest(new { erro = resultado.Erro });
 }).RequireAuthorization("CanManageStock");
 
 app.MapPost("/pdv/vendas", (RegistrarVendaLojaRequest request, LojaService loja, HttpContext context) =>

@@ -603,6 +603,84 @@ h2 {
     gap: 14px;
 }
 
+.import-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.import-upload-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+}
+
+.import-item-list {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.import-item {
+    display: grid;
+    gap: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-soft);
+    padding: 14px;
+}
+
+.import-item.is-ignored {
+    opacity: 0.55;
+}
+
+.import-item-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.import-item-head strong {
+    color: var(--ink);
+}
+
+.import-item-head span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.import-item-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.7fr) minmax(0, 0.7fr);
+    gap: 10px;
+}
+
+.import-item-variation,
+.import-item-new {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    border-top: 1px dashed var(--accent-line);
+    padding-top: 12px;
+}
+
+.import-confirm-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.import-confirm-row label {
+    min-width: 240px;
+}
+
 label {
     display: grid;
     gap: 6px;
@@ -2645,6 +2723,15 @@ footer.online-order-actions {
 
     .return-item {
         grid-template-columns: 1fr;
+    }
+
+    .import-item-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .import-confirm-row {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .site-product-card {

@@ -18,6 +18,7 @@ const state = {
     currentUser: null,
     cart: [],
     lastReceipt: null,
+    notaImport: null,
     productSearch: "",
     stockDetailSearch: "",
     productCategoryFilter: "",
@@ -353,6 +354,13 @@ function cacheElements() {
     els.stockDocument = document.querySelector("#stockDocument");
     els.stockNote = document.querySelector("#stockNote");
     els.stockMap = document.querySelector("#stockMap");
+    els.notaImportFile = document.querySelector("#notaImportFile");
+    els.notaImportFileName = document.querySelector("#notaImportFileName");
+    els.notaImportResult = document.querySelector("#notaImportResult");
+    els.notaImportSummary = document.querySelector("#notaImportSummary");
+    els.notaImportItems = document.querySelector("#notaImportItems");
+    els.notaImportSupplier = document.querySelector("#notaImportSupplier");
+    els.notaImportConfirmButton = document.querySelector("#notaImportConfirmButton");
     els.movementsTable = document.querySelector("#movementsTable");
     els.movementCount = document.querySelector("#movementCount");
     els.supplierForm = document.querySelector("#supplierForm");
@@ -521,6 +529,9 @@ function bindEvents() {
         renderStockProductPicker();
         renderStockVariationFields();
     });
+    els.notaImportFile.addEventListener("change", handleNotaImportFileChange);
+    els.notaImportItems.addEventListener("change", handleNotaImportItemChange);
+    els.notaImportConfirmButton.addEventListener("click", confirmNotaImport);
     els.supplierForm.addEventListener("submit", saveSupplier);
     els.panelUserForm.addEventListener("submit", savePanelUser);
     els.cancelUserEditButton.addEventListener("click", resetPanelUserForm);
@@ -1667,10 +1678,15 @@ function renderSupplierOptions() {
     }
 
     const activeSuppliers = state.suppliers.filter((supplier) => supplier.ativo);
-    els.stockSupplier.innerHTML = [
+    const optionsMarkup = [
         '<option value="">Sem fornecedor</option>',
         ...activeSuppliers.map((supplier) => `<option value="${supplier.id}">${escapeHtml(supplier.nome)}</option>`)
     ].join("");
+
+    els.stockSupplier.innerHTML = optionsMarkup;
+    if (els.notaImportSupplier) {
+        els.notaImportSupplier.innerHTML = optionsMarkup;
+    }
 }
 
 function renderStockProductPicker() {
@@ -3792,6 +3808,296 @@ async function saveStockEntry(event) {
     }
 }
 
+async function handleNotaImportFileChange(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        return;
+    }
+
+    els.notaImportFileName.textContent = file.name;
+
+    const formData = new FormData();
+    formData.append("arquivo", file);
+
+    try {
+        const response = await fetch("/estoque/importar-nota/preview", {
+            method: "POST",
+            body: formData
+        });
+        const text = await response.text();
+        const payload = text ? JSON.parse(text) : null;
+
+        if (response.status === 401) {
+            window.location.href = "/login.html";
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(payload?.erro || "Não foi possível ler a nota.");
+        }
+
+        state.notaImport = {
+            ...payload,
+            itens: payload.itens.map((item) => ({
+                ...item,
+                vinculo: item.produtoSugeridoId || "novo",
+                quantidadeFinal: item.quantidade,
+                custoFinal: item.valorUnitario,
+                tamanho: "",
+                cor: "",
+                modelo: "",
+                nomeNovo: item.descricao,
+                categoriaId: "",
+                sku: item.codigo,
+                precoVenda: ""
+            }))
+        };
+        renderNotaImportPreview();
+    } catch (error) {
+        showToast(error.message);
+        state.notaImport = null;
+        renderNotaImportPreview();
+    }
+}
+
+function renderNotaImportPreview() {
+    if (!els.notaImportResult) {
+        return;
+    }
+
+    const nota = state.notaImport;
+    if (!nota) {
+        els.notaImportResult.classList.add("hidden");
+        els.notaImportItems.innerHTML = "";
+        return;
+    }
+
+    els.notaImportResult.classList.remove("hidden");
+    const detalhes = [
+        nota.fornecedorCnpj ? `CNPJ ${escapeHtml(nota.fornecedorCnpj)}` : null,
+        nota.numeroNota ? `Nota ${escapeHtml(nota.numeroNota)}${nota.serie ? ` série ${escapeHtml(nota.serie)}` : ""}` : null,
+        `${nota.itens.length} ${nota.itens.length === 1 ? "item encontrado" : "itens encontrados"}`
+    ].filter(Boolean).join(" · ");
+
+    els.notaImportSummary.innerHTML = `
+        <strong>${escapeHtml(nota.fornecedorNome || "Fornecedor não identificado")}</strong>
+        <span>${detalhes}. Confira cada linha antes de confirmar.</span>
+    `;
+
+    els.notaImportItems.innerHTML = nota.itens.map((item, index) => {
+        const produtoExistente = state.products.find((product) => product.id === item.vinculo) || null;
+
+        const opcoesProdutos = [
+            `<option value="ignorar" ${item.vinculo === "ignorar" ? "selected" : ""}>Ignorar esta linha</option>`,
+            `<option value="novo" ${item.vinculo === "novo" ? "selected" : ""}>+ Criar novo produto</option>`,
+            `<optgroup label="Produtos existentes">${state.products
+                .filter((product) => product.ativo)
+                .map((product) => `<option value="${product.id}" ${item.vinculo === product.id ? "selected" : ""}>${escapeHtml(product.nome)}${product.sku ? ` (${escapeHtml(product.sku)})` : ""}</option>`)
+                .join("")}</optgroup>`
+        ].join("");
+
+        const variacaoMarkup = produtoExistente ? renderNotaImportVariationFields(produtoExistente, item, index) : "";
+        const novoMarkup = item.vinculo === "novo" ? `
+            <div class="import-item-new">
+                <label>Nome
+                    <input type="text" data-import-field="nomeNovo" data-import-index="${index}" value="${escapeHtml(item.nomeNovo || "")}">
+                </label>
+                <label>Categoria
+                    <select data-import-field="categoriaId" data-import-index="${index}">${els.productCategory.innerHTML}</select>
+                </label>
+                <label>SKU
+                    <input type="text" data-import-field="sku" data-import-index="${index}" value="${escapeHtml(item.sku || "")}">
+                </label>
+                <label>Preço de venda
+                    <input type="number" min="0" step="0.01" data-import-field="precoVenda" data-import-index="${index}" value="${item.precoVenda}" placeholder="0,00">
+                </label>
+            </div>
+        ` : "";
+
+        return `
+            <div class="import-item ${item.vinculo === "ignorar" ? "is-ignored" : ""}" data-import-row="${index}">
+                <div class="import-item-head">
+                    <strong>${escapeHtml(item.descricao)}</strong>
+                    <span>Código NF: ${escapeHtml(item.codigo || "—")}${item.ncm ? ` · NCM ${escapeHtml(item.ncm)}` : ""}</span>
+                </div>
+                <div class="import-item-grid">
+                    <label>Produto
+                        <select data-import-field="vinculo" data-import-index="${index}">${opcoesProdutos}</select>
+                    </label>
+                    <label>Quantidade
+                        <input type="number" min="1" step="1" data-import-field="quantidadeFinal" data-import-index="${index}" value="${item.quantidadeFinal}">
+                    </label>
+                    <label>Custo unitário
+                        <input type="number" min="0" step="0.01" data-import-field="custoFinal" data-import-index="${index}" value="${item.custoFinal}">
+                    </label>
+                </div>
+                ${variacaoMarkup}
+                ${novoMarkup}
+            </div>
+        `;
+    }).join("");
+
+    nota.itens.forEach((item, index) => {
+        if (item.vinculo !== "novo" || !item.categoriaId) {
+            return;
+        }
+        const select = els.notaImportItems.querySelector(`select[data-import-field="categoriaId"][data-import-index="${index}"]`);
+        if (select) {
+            select.value = item.categoriaId;
+        }
+    });
+}
+
+function renderNotaImportVariationFields(produto, item, index) {
+    const campos = [
+        renderNotaImportVariationSelect("tamanho", "Tamanho", produto.tamanhos || [], item.tamanho, index),
+        renderNotaImportVariationSelect("cor", "Cor", produto.cores || [], item.cor, index),
+        renderNotaImportVariationSelect("modelo", "Modelo", produto.modelos || [], item.modelo, index)
+    ].filter(Boolean);
+
+    return campos.length ? `<div class="import-item-variation">${campos.join("")}</div>` : "";
+}
+
+function renderNotaImportVariationSelect(field, label, options, valorAtual, index) {
+    if (!options.length) {
+        return "";
+    }
+
+    return `
+        <label>${label}
+            <select data-import-field="${field}" data-import-index="${index}">
+                <option value="">Selecione</option>
+                ${options.map((option) => `<option value="${escapeHtml(option)}" ${option === valorAtual ? "selected" : ""}>${escapeHtml(option)}</option>`).join("")}
+            </select>
+        </label>
+    `;
+}
+
+function handleNotaImportItemChange(event) {
+    const field = event.target.dataset.importField;
+    const index = Number(event.target.dataset.importIndex);
+    if (!field || Number.isNaN(index) || !state.notaImport) {
+        return;
+    }
+
+    const item = state.notaImport.itens[index];
+    if (!item) {
+        return;
+    }
+
+    if (field === "vinculo") {
+        item.vinculo = event.target.value;
+        item.tamanho = "";
+        item.cor = "";
+        item.modelo = "";
+        renderNotaImportPreview();
+        return;
+    }
+
+    item[field] = event.target.value;
+}
+
+async function confirmNotaImport() {
+    if (!state.notaImport) {
+        return;
+    }
+
+    const itensAcionaveis = state.notaImport.itens.filter((item) => item.vinculo !== "ignorar");
+    if (itensAcionaveis.length === 0) {
+        showToast("Nenhum item selecionado para importar.");
+        return;
+    }
+
+    for (const item of itensAcionaveis) {
+        const quantidade = Number(item.quantidadeFinal);
+        if (!quantidade || quantidade <= 0) {
+            showToast(`Informe uma quantidade válida para "${item.descricao}".`);
+            return;
+        }
+
+        if (item.vinculo === "novo") {
+            if (!item.categoriaId) {
+                showToast(`Escolha a categoria do novo produto "${item.nomeNovo || item.descricao}".`);
+                return;
+            }
+            if (!item.precoVenda || Number(item.precoVenda) <= 0) {
+                showToast(`Informe o preço de venda de "${item.nomeNovo || item.descricao}".`);
+                return;
+            }
+        }
+    }
+
+    els.notaImportConfirmButton.disabled = true;
+    els.notaImportConfirmButton.textContent = "Importando...";
+
+    const fornecedorId = els.notaImportSupplier.value || null;
+    const documento = [
+        state.notaImport.numeroNota ? `NF ${state.notaImport.numeroNota}` : null,
+        state.notaImport.serie ? `série ${state.notaImport.serie}` : null
+    ].filter(Boolean).join(" ") || null;
+
+    let sucesso = 0;
+    const falhas = [];
+
+    for (const item of itensAcionaveis) {
+        try {
+            if (item.vinculo === "novo") {
+                await api("/produtos", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        nome: (item.nomeNovo || item.descricao).trim(),
+                        categoriaId: item.categoriaId,
+                        sku: emptyToNull(item.sku),
+                        preco: Number(item.precoVenda),
+                        custo: Number(item.custoFinal || 0),
+                        quantidadeInicial: Number(item.quantidadeFinal),
+                        descricao: null,
+                        imagemUrl: null,
+                        imagensExtras: [],
+                        tamanhos: [],
+                        cores: [],
+                        modelos: [],
+                        variacoesEstoque: [],
+                        guiaMedidas: null
+                    })
+                });
+            } else {
+                await api(`/produtos/${item.vinculo}/estoque/entrada`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        quantidade: Number(item.quantidadeFinal),
+                        observacao: `Importado da nota fiscal${state.notaImport.fornecedorNome ? ` de ${state.notaImport.fornecedorNome}` : ""}`,
+                        fornecedorId,
+                        custoUnitario: item.custoFinal ? Number(item.custoFinal) : null,
+                        documento,
+                        tamanho: emptyToNull(item.tamanho),
+                        cor: emptyToNull(item.cor),
+                        modelo: emptyToNull(item.modelo)
+                    })
+                });
+            }
+            sucesso += 1;
+        } catch (error) {
+            falhas.push(`${item.descricao}: ${error.message}`);
+        }
+    }
+
+    els.notaImportConfirmButton.disabled = false;
+    els.notaImportConfirmButton.textContent = "Confirmar importação";
+
+    if (falhas.length === 0) {
+        showToast(`${sucesso} ${sucesso === 1 ? "item importado" : "itens importados"} com sucesso.`);
+        state.notaImport = null;
+        els.notaImportFile.value = "";
+        els.notaImportFileName.textContent = "Nenhum arquivo selecionado.";
+        renderNotaImportPreview();
+    } else {
+        showToast(`${sucesso} importados, ${falhas.length} com erro: ${falhas[0]}`);
+    }
+
+    await refreshScoped(["products", "movements"]);
+}
+
 function renderPdvCustomerOptions() {
     if (!els.saleCustomer) {
         return;
@@ -4872,13 +5178,32 @@ function sanitizeSkuText(value) {
         .replace(/[^A-Z0-9]+/g, "");
 }
 
+const LETTER_SIZE_SKU_CODES = {
+    P: "1P",
+    M: "2M",
+    G: "3G",
+    GG: "4E",
+    XG: "5E",
+    XXG: "6E",
+    XXXG: "7E",
+    G1: "G1",
+    G2: "G2",
+    G3: "G3"
+};
+
 function buildVariantSku(baseSku, tamanho) {
     const base = (baseSku || "").trim();
     const size = (tamanho || "").trim();
     if (!base || !size) {
         return "";
     }
-    const suffix = sanitizeSkuText(size);
+
+    const sizeNormalized = sanitizeSkuText(size);
+    const isNumericSize = /^\d+$/.test(sizeNormalized);
+    const suffix = isNumericSize
+        ? sizeNormalized
+        : (LETTER_SIZE_SKU_CODES[sizeNormalized] || sizeNormalized);
+
     return suffix ? `${base}${suffix}` : base;
 }
 

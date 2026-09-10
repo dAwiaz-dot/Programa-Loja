@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml.Linq;
 using LojaSistema.Api.Models;
 using LojaSistema.Api.Requests;
 using LojaSistema.Api.Responses;
@@ -1377,6 +1378,115 @@ public sealed class LojaService
                 .OrderByDescending(movimentacao => movimentacao.CriadaEm)
                 .ToList();
         }
+    }
+
+    public Resultado<NotaFiscalPreviewResponse> LerPreviewNotaFiscalXml(Stream conteudoXml)
+    {
+        XDocument documento;
+        try
+        {
+            documento = XDocument.Load(conteudoXml);
+        }
+        catch (Exception)
+        {
+            return Resultado<NotaFiscalPreviewResponse>.Falha("Nao foi possivel ler o arquivo. Confirme se e o XML da NF-e (nao o PDF/DANFE).");
+        }
+
+        var raiz = documento.Root;
+        if (raiz is null)
+        {
+            return Resultado<NotaFiscalPreviewResponse>.Falha("Arquivo XML vazio ou invalido.");
+        }
+
+        XNamespace ns = raiz.GetDefaultNamespace();
+        var infNFe = documento.Descendants(ns + "infNFe").FirstOrDefault();
+        if (infNFe is null)
+        {
+            return Resultado<NotaFiscalPreviewResponse>.Falha("Esse arquivo nao parece ser uma NF-e (tag infNFe nao encontrada).");
+        }
+
+        var detalhes = infNFe.Elements(ns + "det").ToList();
+        if (detalhes.Count == 0)
+        {
+            return Resultado<NotaFiscalPreviewResponse>.Falha("A nota nao tem nenhum produto para importar.");
+        }
+
+        var emitente = infNFe.Element(ns + "emit");
+        var identificacao = infNFe.Element(ns + "ide");
+
+        lock (_sync)
+        {
+            var itens = detalhes
+                .Select(det => det.Element(ns + "prod"))
+                .Where(prod => prod is not null)
+                .Select(prod =>
+                {
+                    var codigo = prod!.Element(ns + "cProd")?.Value?.Trim() ?? "";
+                    var descricao = prod.Element(ns + "xProd")?.Value?.Trim() ?? "Produto sem descricao";
+                    var ncm = prod.Element(ns + "NCM")?.Value?.Trim();
+                    var unidade = prod.Element(ns + "uCom")?.Value?.Trim() ?? "UN";
+                    var quantidade = LerDecimalXml(prod.Element(ns + "qCom")?.Value);
+                    var valorUnitario = LerDecimalXml(prod.Element(ns + "vUnCom")?.Value);
+                    var valorTotal = LerDecimalXml(prod.Element(ns + "vProd")?.Value);
+
+                    var sugestao = EncontrarProdutoSemelhante(codigo, descricao);
+
+                    return new NotaFiscalItemPreview(
+                        codigo,
+                        descricao,
+                        string.IsNullOrWhiteSpace(ncm) ? null : ncm,
+                        unidade,
+                        quantidade,
+                        valorUnitario,
+                        valorTotal,
+                        sugestao?.Id,
+                        sugestao?.Nome);
+                })
+                .ToList();
+
+            var resposta = new NotaFiscalPreviewResponse(
+                emitente?.Element(ns + "xNome")?.Value?.Trim(),
+                emitente?.Element(ns + "CNPJ")?.Value?.Trim(),
+                identificacao?.Element(ns + "nNF")?.Value?.Trim(),
+                identificacao?.Element(ns + "serie")?.Value?.Trim(),
+                itens);
+
+            return Resultado<NotaFiscalPreviewResponse>.Ok(resposta);
+        }
+    }
+
+    private Produto? EncontrarProdutoSemelhante(string codigo, string descricao)
+    {
+        var codigoNormalizado = NormalizarComparacao(codigo);
+        if (codigoNormalizado.Length > 0)
+        {
+            var porSku = _produtos.Values.FirstOrDefault(produto => NormalizarComparacao(produto.Sku) == codigoNormalizado);
+            if (porSku is not null)
+            {
+                return porSku;
+            }
+        }
+
+        var descricaoNormalizada = NormalizarComparacao(descricao);
+        if (descricaoNormalizada.Length == 0)
+        {
+            return null;
+        }
+
+        return _produtos.Values.FirstOrDefault(produto =>
+        {
+            var nomeNormalizado = NormalizarComparacao(produto.Nome);
+            return nomeNormalizado == descricaoNormalizada
+                || nomeNormalizado.Contains(descricaoNormalizada)
+                || descricaoNormalizada.Contains(nomeNormalizado);
+        });
+    }
+
+    private static decimal LerDecimalXml(string? valor)
+    {
+        return decimal.TryParse(valor, NumberStyles.Number, CultureInfo.InvariantCulture, out var resultado)
+            ? resultado
+            : 0;
     }
 
     public Resultado<VendaLoja> RegistrarVendaLoja(RegistrarVendaLojaRequest request)
