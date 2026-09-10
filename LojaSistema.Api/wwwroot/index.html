@@ -1290,57 +1290,58 @@
 
                         <div class="cart-list" id="cartList"></div>
 
-                        <div class="payment-box">
-                            <span>Ajustes da venda</span>
-                            <div class="pdv-money-grid">
+                        <div class="pdv-cart-footer">
+                            <div class="payment-box">
+                                <span>Pagamento</span>
+                                <div class="segmented" id="paymentOptions">
+                                    <label><input type="radio" name="payment" value="Pix" checked> Pix</label>
+                                    <label><input type="radio" name="payment" value="Dinheiro"> Dinheiro</label>
+                                    <label><input type="radio" name="payment" value="CartaoDebito"> Débito</label>
+                                    <label><input type="radio" name="payment" value="CartaoCredito"> Crédito</label>
+                                </div>
+                            </div>
+
+                            <details class="pdv-extra-details">
+                                <summary>Desconto, cliente e observação</summary>
+                                <div class="pdv-money-grid">
+                                    <label>
+                                        Desconto
+                                        <input id="saleDiscount" type="number" min="0" step="0.01" placeholder="0,00">
+                                    </label>
+                                    <label>
+                                        Valor recebido
+                                        <input id="saleReceived" type="number" min="0" step="0.01" placeholder="0,00">
+                                    </label>
+                                </div>
                                 <label>
-                                    Desconto
-                                    <input id="saleDiscount" type="number" min="0" step="0.01" placeholder="0,00">
+                                    Cliente (opcional)
+                                    <select id="saleCustomer">
+                                        <option value="">Sem cliente</option>
+                                    </select>
                                 </label>
                                 <label>
-                                    Valor recebido
-                                    <input id="saleReceived" type="number" min="0" step="0.01" placeholder="0,00">
+                                    Observação
+                                    <input id="saleNote" type="text" autocomplete="off" placeholder="Ex: retirada na loja">
                                 </label>
+                            </details>
+
+                            <div class="cart-totals">
+                                <div class="total-row">
+                                    <span>Subtotal</span>
+                                    <strong id="cartSubtotal">R$ 0,00</strong>
+                                </div>
+                                <div class="total-row">
+                                    <span>Troco</span>
+                                    <strong id="saleChange">R$ 0,00</strong>
+                                </div>
+                                <div class="total-row is-grand">
+                                    <span>Total</span>
+                                    <strong id="cartTotal">R$ 0,00</strong>
+                                </div>
                             </div>
-                            <label>
-                                Cliente (opcional)
-                                <select id="saleCustomer">
-                                    <option value="">Sem cliente</option>
-                                </select>
-                            </label>
-                            <label>
-                                Observação
-                                <input id="saleNote" type="text" autocomplete="off" placeholder="Ex: retirada na loja">
-                            </label>
-                        </div>
 
-                        <div class="payment-box">
-                            <span>Pagamento</span>
-                            <div class="segmented" id="paymentOptions">
-                                <label><input type="radio" name="payment" value="Pix" checked> Pix</label>
-                                <label><input type="radio" name="payment" value="Dinheiro"> Dinheiro</label>
-                                <label><input type="radio" name="payment" value="CartaoDebito"> Débito</label>
-                                <label><input type="radio" name="payment" value="CartaoCredito"> Crédito</label>
-                            </div>
+                            <button class="button button-primary button-full" id="finishSaleButton" type="button">Finalizar venda</button>
                         </div>
-
-                        <div class="total-row">
-                            <span>Subtotal</span>
-                            <strong id="cartSubtotal">R$ 0,00</strong>
-                        </div>
-
-                        <div class="total-row">
-                            <span>Total</span>
-                            <strong id="cartTotal">R$ 0,00</strong>
-                        </div>
-
-                        <div class="total-row">
-                            <span>Troco</span>
-                            <strong id="saleChange">R$ 0,00</strong>
-                        </div>
-
-                        <button class="button button-primary button-full" id="finishSaleButton" type="button">Finalizar venda</button>
-                        <div class="receipt-box hidden" id="receiptBox"></div>
                     </aside>
                 </div>
             </section>
@@ -1850,6 +1851,16 @@
 
             <button class="button button-danger button-full" type="submit">Registrar devolução</button>
         </form>
+    </div>
+
+    <div class="receipt-modal hidden" id="receiptModal" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle">
+        <div class="receipt-modal-card">
+            <div class="panel-header">
+                <h2 id="receiptModalTitle">Comprovante da venda</h2>
+                <button class="button button-ghost" id="closeReceiptButton" type="button">Fechar</button>
+            </div>
+            <div class="receipt-box" id="receiptBox"></div>
+        </div>
     </div>
 
     <div class="label-print-area" id="labelPrintArea"></div>

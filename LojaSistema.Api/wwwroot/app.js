@@ -325,6 +325,8 @@ function cacheElements() {
     els.saleNote = document.querySelector("#saleNote");
     els.saleCustomer = document.querySelector("#saleCustomer");
     els.receiptBox = document.querySelector("#receiptBox");
+    els.receiptModal = document.querySelector("#receiptModal");
+    els.closeReceiptButton = document.querySelector("#closeReceiptButton");
     els.finishSaleButton = document.querySelector("#finishSaleButton");
 
     els.stockForm = document.querySelector("#stockForm");
@@ -523,6 +525,7 @@ function bindEvents() {
     els.panelUserForm.addEventListener("submit", savePanelUser);
     els.cancelUserEditButton.addEventListener("click", resetPanelUserForm);
     els.finishSaleButton.addEventListener("click", finishSale);
+    els.closeReceiptButton.addEventListener("click", closeReceiptModal);
     els.returnForm.addEventListener("submit", submitReturnSale);
     els.cancelReturnButton.addEventListener("click", closeReturnDialog);
     els.saleDiscount.addEventListener("input", renderCart);
@@ -2051,7 +2054,8 @@ function renderPdvProducts() {
                     <div class="product-thumb">${image}</div>
                     <div>
                         <strong>${escapeHtml(product.nome)}</strong>
-                        <span>${escapeHtml(product.categoria)}${product.sku ? ` · SKU ${escapeHtml(product.sku)}` : ""} · ${available} un. disponíveis</span>
+                        <span>${escapeHtml(product.categoria)}${product.sku ? ` · SKU ${escapeHtml(product.sku)}` : ""}</span>
+                        <span class="product-stock-badge${available === 0 ? " is-low" : ""}">${available} un. disponíveis</span>
                     </div>
                     ${variationControls}
                     <footer>
@@ -4007,15 +4011,19 @@ function renderExchangeSummary() {
     `;
 }
 
+function closeReceiptModal() {
+    els.receiptModal.classList.add("hidden");
+}
+
 function renderReceipt(sale) {
     if (!sale) {
-        els.receiptBox.classList.add("hidden");
         els.receiptBox.innerHTML = "";
+        closeReceiptModal();
         return;
     }
 
     const shortId = sale.id.slice(0, 8).toUpperCase();
-    els.receiptBox.classList.remove("hidden");
+    els.receiptModal.classList.remove("hidden");
     els.receiptBox.innerHTML = `
         <div class="receipt-head">
             <div>
