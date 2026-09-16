@@ -4810,7 +4810,7 @@ function resetProductForm() {
     els.productInitialStockHint.classList.add("hidden");
     els.productSku.value = "";
     els.productCost.value = "";
-    els.productCostMultiplier.value = "";
+    els.productCostMultiplier.value = "2.10";
     els.productSizes.value = "";
     els.productColors.value = "";
     refreshVariantDatalists();
