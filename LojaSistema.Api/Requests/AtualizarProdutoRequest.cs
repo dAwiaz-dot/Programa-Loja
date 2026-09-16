@@ -6,6 +6,7 @@ public sealed record AtualizarProdutoRequest(
     string? Sku,
     decimal Preco,
     decimal Custo,
+    decimal? MultiplicadorPreco,
     bool Ativo,
     string? Descricao,
     string? ImagemUrl,

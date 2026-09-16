@@ -1139,6 +1139,7 @@ public sealed class LojaService
                 Sku = NormalizarTextoOpcional(request.Sku),
                 Preco = request.Preco,
                 Custo = Math.Max(0, request.Custo),
+                MultiplicadorPreco = request.MultiplicadorPreco is > 0 ? request.MultiplicadorPreco : null,
                 QuantidadeEmEstoque = variacoes.Count > 0 ? variacoes.Sum(variacao => variacao.Quantidade) : request.QuantidadeInicial,
                 Descricao = NormalizarTextoOpcional(request.Descricao),
                 ImagemUrl = NormalizarTextoOpcional(request.ImagemUrl),
@@ -1182,6 +1183,7 @@ public sealed class LojaService
             produto.Sku = NormalizarTextoOpcional(request.Sku);
             produto.Preco = request.Preco;
             produto.Custo = Math.Max(0, request.Custo);
+            produto.MultiplicadorPreco = request.MultiplicadorPreco is > 0 ? request.MultiplicadorPreco : null;
             produto.Ativo = request.Ativo;
             produto.Descricao = NormalizarTextoOpcional(request.Descricao);
             produto.ImagemUrl = NormalizarTextoOpcional(request.ImagemUrl);
@@ -2822,6 +2824,7 @@ public sealed class LojaService
                 ImagensLojaExtrasJson TEXT NOT NULL,
                 Preco TEXT NOT NULL,
                 Custo TEXT NOT NULL,
+                MultiplicadorPreco TEXT NULL,
                 QuantidadeEmEstoque INTEGER NOT NULL,
                 Ativo INTEGER NOT NULL,
                 CriadoEm TEXT NOT NULL,
@@ -2937,6 +2940,7 @@ public sealed class LojaService
         GarantirColuna(connection, "Produtos", "VariacoesEstoqueJson", "TEXT NOT NULL DEFAULT '[]'");
         GarantirColuna(connection, "Produtos", "GuiaMedidas", "TEXT NULL");
         GarantirColuna(connection, "Produtos", "Custo", "TEXT NOT NULL DEFAULT '0'");
+        GarantirColuna(connection, "Produtos", "MultiplicadorPreco", "TEXT NULL");
 
         ExecuteNonQuery(connection, null, """
             CREATE TABLE IF NOT EXISTS EstoqueMovimentacoes (
@@ -3451,6 +3455,7 @@ public sealed class LojaService
                 ImagensLojaExtras = DeserializeJson(ReadString(reader, "ImagensLojaExtrasJson"), new List<string>()),
                 Preco = ReadDecimal(reader, "Preco"),
                 Custo = ReadDecimal(reader, "Custo"),
+                MultiplicadorPreco = ReadNullableDecimal(reader, "MultiplicadorPreco"),
                 QuantidadeEmEstoque = ReadInt(reader, "QuantidadeEmEstoque"),
                 Ativo = ReadBool(reader, "Ativo"),
                 CriadoEm = ReadDateTime(reader, "CriadoEm"),
@@ -3794,13 +3799,13 @@ public sealed class LojaService
                 Id, Nome, CategoriaId, Sku, Descricao, ImagemUrl, ImagensExtrasJson,
                 TamanhosJson, CoresJson, ModelosJson, VariacoesEstoqueJson, GuiaMedidas,
                 PublicadoNaLoja, DestaqueLoja, OrdemLoja, NomeLoja, DescricaoLoja,
-                PrecoLoja, ImagemLojaUrl, ImagensLojaExtrasJson, Preco, Custo,
+                PrecoLoja, ImagemLojaUrl, ImagensLojaExtrasJson, Preco, Custo, MultiplicadorPreco,
                 QuantidadeEmEstoque, Ativo, CriadoEm, AtualizadoEm)
             VALUES (
                 $Id, $Nome, $CategoriaId, $Sku, $Descricao, $ImagemUrl, $ImagensExtrasJson,
                 $TamanhosJson, $CoresJson, $ModelosJson, $VariacoesEstoqueJson, $GuiaMedidas,
                 $PublicadoNaLoja, $DestaqueLoja, $OrdemLoja, $NomeLoja, $DescricaoLoja,
-                $PrecoLoja, $ImagemLojaUrl, $ImagensLojaExtrasJson, $Preco, $Custo,
+                $PrecoLoja, $ImagemLojaUrl, $ImagensLojaExtrasJson, $Preco, $Custo, $MultiplicadorPreco,
                 $QuantidadeEmEstoque, $Ativo, $CriadoEm, $AtualizadoEm);
             """);
         Add(command, "$Id", produto.Id);
@@ -3825,6 +3830,7 @@ public sealed class LojaService
         Add(command, "$ImagensLojaExtrasJson", SerializeJson(produto.ImagensLojaExtras));
         Add(command, "$Preco", produto.Preco);
         Add(command, "$Custo", produto.Custo);
+        Add(command, "$MultiplicadorPreco", produto.MultiplicadorPreco);
         Add(command, "$QuantidadeEmEstoque", produto.QuantidadeEmEstoque);
         Add(command, "$Ativo", produto.Ativo);
         Add(command, "$CriadoEm", produto.CriadoEm);
@@ -4824,6 +4830,7 @@ public sealed class LojaService
             produto.Sku,
             produto.Preco,
             produto.Custo,
+            produto.MultiplicadorPreco,
             produto.QuantidadeEmEstoque,
             produto.Ativo,
             produto.Descricao,

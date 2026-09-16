@@ -260,7 +260,7 @@
                                     <span class="form-section-num">2</span>
                                     Preço e estoque
                                 </div>
-                                <div class="form-section-grid form-section-grid-3">
+                                <div class="form-section-grid form-section-grid-4">
                                     <label>
                                         Preço
                                         <input id="productPrice" name="preco" type="number" min="0.01" step="0.01" required>
@@ -269,6 +269,12 @@
                                     <label>
                                         Custo
                                         <input id="productCost" name="custo" type="number" min="0" step="0.01" placeholder="0,00">
+                                    </label>
+
+                                    <label>
+                                        Multiplicador
+                                        <input id="productCostMultiplier" name="multiplicadorPreco" type="number" min="0" step="0.01" placeholder="Ex: 2">
+                                        <span class="field-hint">Preço = Custo × Multiplicador (calcula sozinho, pode editar depois)</span>
                                     </label>
 
                                     <label>
@@ -318,6 +324,8 @@
                                         </div>
                                         <div class="variant-rows" id="productVariantRows"></div>
                                         <textarea class="hidden" id="productVariantStock" rows="4"></textarea>
+                                        <datalist id="productSizesDatalist"></datalist>
+                                        <datalist id="productColorsDatalist"></datalist>
                                     </div>
 
                                     <label class="form-span">

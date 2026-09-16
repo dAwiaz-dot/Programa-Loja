@@ -146,6 +146,7 @@ function cacheElements() {
     els.generateSkuButton = document.querySelector("#generateSkuButton");
     els.productPrice = document.querySelector("#productPrice");
     els.productCost = document.querySelector("#productCost");
+    els.productCostMultiplier = document.querySelector("#productCostMultiplier");
     els.productInitialStock = document.querySelector("#productInitialStock");
     els.productInitialStockLabel = document.querySelector("#productInitialStockLabel");
     els.productInitialStockHint = document.querySelector("#productInitialStockHint");
@@ -153,6 +154,8 @@ function cacheElements() {
     els.productSizes = document.querySelector("#productSizes");
     els.productColors = document.querySelector("#productColors");
     els.productVariantRows = document.querySelector("#productVariantRows");
+    els.productSizesDatalist = document.querySelector("#productSizesDatalist");
+    els.productColorsDatalist = document.querySelector("#productColorsDatalist");
     els.addVariantRowButton = document.querySelector("#addVariantRowButton");
     els.variantQuickAddInput = document.querySelector("#variantQuickAddInput");
     els.variantQuickAddButton = document.querySelector("#variantQuickAddButton");
@@ -432,6 +435,8 @@ function bindEvents() {
     els.addVariantRowButton.addEventListener("click", () => addProductVariantRow());
     els.variantQuickAddButton.addEventListener("click", applyVariantQuickAdd);
     els.productSku.addEventListener("input", refreshAutoVariantSkus);
+    els.productCost.addEventListener("input", applyProductCostMultiplier);
+    els.productCostMultiplier.addEventListener("input", applyProductCostMultiplier);
     els.generateSkuButton.addEventListener("click", generateProductSku);
     els.variantQuickAddInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
@@ -440,6 +445,9 @@ function bindEvents() {
         }
     });
     els.productVariantRows.addEventListener("input", syncProductVariantTextarea);
+    els.productVariantRows.addEventListener("change", syncSizesAndColorsFromVariantRows);
+    els.productSizes.addEventListener("input", refreshVariantDatalists);
+    els.productColors.addEventListener("input", refreshVariantDatalists);
     els.productVariantRows.addEventListener("click", (event) => {
         const button = event.target.closest("[data-variant-action='remove']");
         if (!button) {
@@ -3308,6 +3316,14 @@ function toReportDateKey(value) {
     return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }
 
+function applyProductCostMultiplier() {
+    const custo = Number(els.productCost.value || 0);
+    const multiplicador = Number(els.productCostMultiplier.value || 0);
+    if (custo > 0 && multiplicador > 0) {
+        els.productPrice.value = (custo * multiplicador).toFixed(2);
+    }
+}
+
 async function saveProduct(event) {
     event.preventDefault();
 
@@ -3326,6 +3342,7 @@ async function saveProduct(event) {
             sku: emptyToNull(els.productSku.value),
             preco: Number(els.productPrice.value),
             custo: Number(els.productCost.value || 0),
+            multiplicadorPreco: els.productCostMultiplier.value ? Number(els.productCostMultiplier.value) : null,
             descricao: emptyToNull(els.productDescription.value),
             imagemUrl,
             imagensExtras,
@@ -4450,7 +4467,7 @@ function buildLabelItemsHtml(labels) {
         <div class="label-item">
             <strong class="label-item-name">${escapeHtml(label.nome)}</strong>
             ${(label.tamanho || label.cor) ? `<span class="label-item-variation">${escapeHtml([label.tamanho, label.cor].filter(Boolean).join(" · "))}</span>` : ""}
-            <span class="label-item-price">${currency.format(label.preco)}</span>
+            <span class="label-item-price">3x de ${currency.format(label.preco / 3)}</span>
             ${label.sku ? `
                 ${window.buildBarcodeSvg?.(label.sku, { width: 220, height: 38 }) || ""}
                 <span class="label-item-sku">${escapeHtml(label.sku)}</span>
@@ -4649,6 +4666,7 @@ function editProduct(product) {
     els.productSku.value = product.sku || "";
     els.productPrice.value = product.preco;
     els.productCost.value = product.custo || 0;
+    els.productCostMultiplier.value = product.multiplicadorPreco || "";
     const hasVariations = (product.variacoesEstoque || []).length > 0;
     els.productInitialStock.value = product.quantidadeEmEstoque;
     els.productInitialStock.disabled = hasVariations;
@@ -4657,6 +4675,7 @@ function editProduct(product) {
     els.productDescription.value = product.descricao || "";
     els.productSizes.value = (product.tamanhos || []).join("\n");
     els.productColors.value = (product.cores || []).join("\n");
+    refreshVariantDatalists();
     renderProductVariantRows(product.variacoesEstoque || []);
     els.productSizeGuide.value = product.guiaMedidas || "";
     els.productActive.checked = product.ativo;
@@ -4791,8 +4810,10 @@ function resetProductForm() {
     els.productInitialStockHint.classList.add("hidden");
     els.productSku.value = "";
     els.productCost.value = "";
+    els.productCostMultiplier.value = "";
     els.productSizes.value = "";
     els.productColors.value = "";
+    refreshVariantDatalists();
     renderProductVariantRows([]);
     els.productSizeGuide.value = "";
     els.productActive.checked = true;
@@ -5243,8 +5264,8 @@ function addProductVariantRow(variation = {}) {
     const hasManualSku = Boolean(variation.sku) && variation.sku !== autoSku;
     row.dataset.skuAuto = hasManualSku ? "false" : "true";
     row.innerHTML = `
-        <input type="text" data-variant-field="tamanho" value="${escapeHtml(variation.tamanho || "")}" placeholder="P">
-        <input type="text" data-variant-field="cor" value="${escapeHtml(variation.cor || "")}" placeholder="Preto">
+        <input type="text" data-variant-field="tamanho" value="${escapeHtml(variation.tamanho || "")}" placeholder="P" list="productSizesDatalist">
+        <input type="text" data-variant-field="cor" value="${escapeHtml(variation.cor || "")}" placeholder="Preto" list="productColorsDatalist">
         <input type="number" min="0" step="1" data-variant-field="quantidade" value="${Number(variation.quantidade || 0)}">
         <input type="text" data-variant-field="sku" value="${escapeHtml(variation.sku || autoSku)}" placeholder="Gerado automaticamente">
         <button class="button button-danger" type="button" data-variant-action="remove">Remover</button>
@@ -5263,6 +5284,30 @@ function addProductVariantRow(variation = {}) {
 
     els.productVariantRows.appendChild(row);
     syncProductVariantTextarea();
+    syncSizesAndColorsFromVariantRows();
+}
+
+function syncSizesAndColorsFromVariantRows() {
+    const rows = Array.from(els.productVariantRows.querySelectorAll("[data-variant-row]"));
+    const rowSizes = rows.map((row) => row.querySelector('[data-variant-field="tamanho"]')?.value || "");
+    const rowColors = rows.map((row) => row.querySelector('[data-variant-field="cor"]')?.value || "");
+
+    els.productSizes.value = mergeTextValues(parseTextList(els.productSizes.value), rowSizes).join(", ");
+    els.productColors.value = mergeTextValues(parseTextList(els.productColors.value), rowColors).join(", ");
+    refreshVariantDatalists();
+}
+
+function refreshVariantDatalists() {
+    if (els.productSizesDatalist) {
+        els.productSizesDatalist.innerHTML = parseTextList(els.productSizes.value)
+            .map((size) => `<option value="${escapeHtml(size)}"></option>`)
+            .join("");
+    }
+    if (els.productColorsDatalist) {
+        els.productColorsDatalist.innerHTML = parseTextList(els.productColors.value)
+            .map((color) => `<option value="${escapeHtml(color)}"></option>`)
+            .join("");
+    }
 }
 
 function refreshAutoVariantSkus() {

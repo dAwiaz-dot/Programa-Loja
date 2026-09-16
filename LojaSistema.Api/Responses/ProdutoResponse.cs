@@ -8,6 +8,7 @@ public sealed record ProdutoResponse(
     string? Sku,
     decimal Preco,
     decimal Custo,
+    decimal? MultiplicadorPreco,
     int QuantidadeEmEstoque,
     bool Ativo,
     string? Descricao,

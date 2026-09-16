@@ -6,6 +6,7 @@ public sealed record CriarProdutoRequest(
     string? Sku,
     decimal Preco,
     decimal Custo,
+    decimal? MultiplicadorPreco,
     int QuantidadeInicial,
     string? Descricao,
     string? ImagemUrl,

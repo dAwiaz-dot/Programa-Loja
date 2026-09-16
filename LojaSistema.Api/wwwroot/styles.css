@@ -762,6 +762,10 @@ textarea:focus {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.form-section-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .form-section-grid .form-span {
     grid-column: 1 / -1;
 }
@@ -983,6 +987,11 @@ textarea:focus {
 @media (max-width: 640px) {
     .image-slot-compare {
         grid-template-columns: 1fr;
+    }
+
+    .form-section-grid-3,
+    .form-section-grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 

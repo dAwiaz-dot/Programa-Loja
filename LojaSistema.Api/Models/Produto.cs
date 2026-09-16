@@ -15,6 +15,7 @@ public sealed class Produto
     public List<ProdutoVariacaoEstoque> VariacoesEstoque { get; set; } = [];
     public string? GuiaMedidas { get; set; }
     public decimal Custo { get; set; }
+    public decimal? MultiplicadorPreco { get; set; }
     public bool PublicadoNaLoja { get; set; }
     public bool DestaqueLoja { get; set; }
     public int OrdemLoja { get; set; }
