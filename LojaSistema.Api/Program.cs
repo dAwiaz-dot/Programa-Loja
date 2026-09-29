@@ -293,6 +293,18 @@ app.MapPost("/clientes-painel", (CriarClientePainelRequest request, LojaService 
 
     loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Cliente cadastrado", resultado.Valor!.Nome);
     return Results.Created($"/clientes-painel/{resultado.Valor!.Id}", resultado.Valor);
+}).RequireAuthorization("CanUsePdv");
+
+app.MapPut("/clientes-painel/{id:guid}", (Guid id, AtualizarClientePainelRequest request, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.AtualizarClientePainel(id, request);
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Cliente atualizado", resultado.Valor!.Nome);
+    return Results.Ok(resultado.Valor);
 }).RequireAuthorization("AdminOnly");
 
 app.MapPost("/usuarios-painel", (CriarUsuarioPainelRequest request, LojaService loja) =>
@@ -768,7 +780,7 @@ app.MapPost("/estoque/importar-nota/preview", async (HttpRequest request, LojaSe
 
 app.MapPost("/pdv/vendas", (RegistrarVendaLojaRequest request, LojaService loja, HttpContext context) =>
 {
-    var resultado = loja.RegistrarVendaLoja(request);
+    var resultado = loja.RegistrarVendaLoja(request, UsuarioPainelAtual(context));
     if (!resultado.Sucesso)
     {
         return Results.BadRequest(new { erro = resultado.Erro });
@@ -806,6 +818,121 @@ app.MapPost("/pdv/vendas/{id:guid}/troca", (Guid id, TrocarVendaLojaRequest requ
     loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Troca PDV", resultado.Valor!.VendaTroca.Id.ToString()[..8].ToUpperInvariant());
     return Results.Ok(resultado.Valor);
 }).RequireAuthorization("CanUsePdv");
+
+app.MapPost("/pdv/vendas/{id:guid}/cancelamento", (Guid id, CancelarVendaLojaRequest request, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.CancelarVendaLoja(id, request.Motivo, UsuarioPainelAtual(context), context.User.IsInRole("Admin"));
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Venda cancelada", $"{resultado.Valor!.Id.ToString()[..8].ToUpperInvariant()} · {resultado.Valor.MotivoCancelamento}");
+    return Results.Ok(resultado.Valor);
+}).RequireAuthorization("CanUsePdv");
+
+app.MapGet("/vendedores", (LojaService loja) => Results.Ok(loja.ListarVendedores()))
+    .RequireAuthorization("CanUsePdv");
+
+app.MapPost("/vendedores", (VendedorRequest request, LojaService loja) =>
+{
+    var resultado = loja.SalvarVendedor(null, request);
+    return resultado.Sucesso ? Results.Ok(resultado.Valor) : Results.BadRequest(new { erro = resultado.Erro });
+}).RequireAuthorization("AdminOnly");
+
+app.MapPut("/vendedores/{id:guid}", (Guid id, VendedorRequest request, LojaService loja) =>
+{
+    var resultado = loja.SalvarVendedor(id, request);
+    return resultado.Sucesso ? Results.Ok(resultado.Valor) : Results.BadRequest(new { erro = resultado.Erro });
+}).RequireAuthorization("AdminOnly");
+
+app.MapGet("/caixa/atual", (LojaService loja) => Results.Ok(new { caixa = loja.ObterCaixaAtual() }))
+    .RequireAuthorization("CanUsePdv");
+
+app.MapGet("/caixa/historico", (LojaService loja) => Results.Ok(loja.ListarCaixas()))
+    .RequireAuthorization("CanUsePdv");
+
+app.MapPost("/caixa/abrir", (AbrirCaixaRequest request, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.AbrirCaixa(request, UsuarioPainelAtual(context));
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Caixa aberto", request.ValorInicial.ToString("C"));
+    return Results.Ok(resultado.Valor);
+}).RequireAuthorization("CanUsePdv");
+
+app.MapPost("/caixa/movimento", (MovimentoCaixaRequest request, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.RegistrarMovimentoCaixa(request, UsuarioPainelAtual(context));
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), request.Tipo == "Sangria" ? "Sangria do caixa" : "Reforço do caixa", request.Valor.ToString("C"));
+    return Results.Ok(resultado.Valor);
+}).RequireAuthorization("CanUsePdv");
+
+app.MapPost("/caixa/fechar", (FecharCaixaRequest request, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.FecharCaixa(request, UsuarioPainelAtual(context));
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Caixa fechado", $"Diferença {resultado.Valor!.Diferenca?.ToString("C")}");
+    return Results.Ok(resultado.Valor);
+}).RequireAuthorization("CanUsePdv");
+
+app.MapGet("/fiado", (LojaService loja) => Results.Ok(loja.ListarFiado()))
+    .RequireAuthorization("CanUsePdv");
+
+app.MapGet("/fiado/{clienteId:guid}", (Guid clienteId, LojaService loja) =>
+{
+    var resultado = loja.ObterExtratoFiado(clienteId);
+    return resultado.Sucesso ? Results.Ok(resultado.Valor) : Results.NotFound(new { erro = resultado.Erro });
+}).RequireAuthorization("CanUsePdv");
+
+app.MapPost("/fiado/{clienteId:guid}/recebimentos", (Guid clienteId, RecebimentoFiadoRequest request, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.RegistrarRecebimentoFiado(clienteId, request, UsuarioPainelAtual(context));
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Fiado recebido", $"{resultado.Valor!.Resumo.Nome} · {request.Valor.ToString("C")}");
+    return Results.Ok(resultado.Valor);
+}).RequireAuthorization("CanUsePdv");
+
+app.MapDelete("/fiado/recebimentos/{id:guid}", (Guid id, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.ExcluirRecebimentoFiado(id);
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Pagamento de fiado estornado", resultado.Valor!.Resumo.Nome);
+    return Results.Ok(resultado.Valor);
+}).RequireAuthorization("AdminOnly");
+
+app.MapPost("/estoque/contagem", (ContagemEstoqueRequest request, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.AplicarContagemEstoque(request);
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    var valor = resultado.Valor!;
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "Contagem de estoque", $"{valor.ItensAjustados} ajuste(s) · +{valor.PecasSobrando} / -{valor.PecasFaltando} peças");
+    return Results.Ok(valor);
+}).RequireAuthorization("CanManageStock");
 
 app.MapPost("/pedidos-online", async (
     RegistrarPedidoOnlineRequest request,
@@ -988,6 +1115,9 @@ static bool IsApiRequest(HttpRequest request)
         request.Path.StartsWithSegments("/loja-configuracao") ||
         request.Path.StartsWithSegments("/estoque") ||
         request.Path.StartsWithSegments("/pdv") ||
+        request.Path.StartsWithSegments("/caixa") ||
+        request.Path.StartsWithSegments("/fiado") ||
+        request.Path.StartsWithSegments("/vendedores") ||
         request.Path.StartsWithSegments("/relatorios") ||
         request.Path.StartsWithSegments("/backup") ||
         request.Path.StartsWithSegments("/pagamentos") ||

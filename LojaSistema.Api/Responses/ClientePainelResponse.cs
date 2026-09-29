@@ -17,4 +17,6 @@ public sealed record ClientePainelResponse(
     string? OrigemUltimaCompra,
     StatusPedidoOnline? UltimoStatusOnline,
     DateTime CriadoEm,
-    DateTime AtualizadoEm);
+    DateTime AtualizadoEm,
+    string? DataNascimento,
+    decimal SaldoFiado);

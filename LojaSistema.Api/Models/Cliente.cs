@@ -6,6 +6,8 @@ public sealed class Cliente
     public required string Nome { get; set; }
     public required string Email { get; set; }
     public string? Telefone { get; set; }
+    // Guardada como texto "yyyy-MM-dd" pra não sofrer com fuso horário.
+    public string? DataNascimento { get; set; }
     public required string SenhaHash { get; set; }
     public string? CodigoRecuperacaoHash { get; set; }
     public DateTime? CodigoRecuperacaoExpiraEm { get; set; }

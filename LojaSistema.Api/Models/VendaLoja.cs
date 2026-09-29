@@ -13,6 +13,16 @@ public sealed class VendaLoja
     public bool Devolvida { get; set; }
     public DateTime? DevolvidaEm { get; set; }
     public string? MotivoDevolucao { get; set; }
+    public int Parcelas { get; init; } = 1;
+    public Guid? VendedorId { get; init; }
+    public string? VendedorNome { get; init; }
+    public decimal ComissaoPercentual { get; init; }
+    public DateTime? VencimentoEm { get; init; }
+    public string? RegistradaPor { get; init; }
+    public bool Cancelada { get; set; }
+    public DateTime? CanceladaEm { get; set; }
+    public string? CanceladaPor { get; set; }
+    public string? MotivoCancelamento { get; set; }
     public decimal TotalBruto => Itens.Sum(item => item.Subtotal);
     public decimal TotalBrutoDevolvido => Itens.Sum(item => item.SubtotalDevolvido);
     public decimal TotalBrutoLiquido => Itens.Sum(item => item.SubtotalLiquido);

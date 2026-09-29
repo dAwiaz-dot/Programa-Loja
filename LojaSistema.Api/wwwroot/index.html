@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&family=Fraunces:ital,wght@0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="/styles.css?v=20260903-3">
+    <link rel="stylesheet" href="/styles.css?v=20260929-2">
 </head>
 <body>
     <div class="app-shell">
@@ -29,6 +29,9 @@
                 <button class="nav-link is-active" type="button" data-view-target="dashboard">Visão geral</button>
                 <button class="nav-link" type="button" data-view-target="products">Produtos</button>
                 <button class="nav-link" type="button" data-view-target="pdv">PDV</button>
+                <button class="nav-link" type="button" data-view-target="salesHistory">Vendas</button>
+                <button class="nav-link" type="button" data-view-target="cashRegister">Caixa</button>
+                <button class="nav-link" type="button" data-view-target="credit">Fiado</button>
                 <button class="nav-link" type="button" data-view-target="stock">Estoque</button>
                 <button class="nav-link" type="button" data-view-target="onlineOrders">Pedidos online</button>
                 <span class="nav-section-label">Loja online</span>
@@ -1296,9 +1299,18 @@
                             <span class="panel-note" id="cartCount">0 itens</span>
                         </div>
 
+                        <div class="cash-status hidden" id="pdvCashStatus"></div>
+
                         <div class="cart-list" id="cartList"></div>
 
                         <div class="pdv-cart-footer">
+                            <label class="pdv-seller">
+                                Vendedora
+                                <select id="saleSeller">
+                                    <option value="">Sem vendedora</option>
+                                </select>
+                            </label>
+
                             <div class="payment-box">
                                 <span>Pagamento</span>
                                 <div class="segmented" id="paymentOptions">
@@ -1306,10 +1318,37 @@
                                     <label><input type="radio" name="payment" value="Dinheiro"> Dinheiro</label>
                                     <label><input type="radio" name="payment" value="CartaoDebito"> Débito</label>
                                     <label><input type="radio" name="payment" value="CartaoCredito"> Crédito</label>
+                                    <label><input type="radio" name="payment" value="Fiado"> Fiado</label>
                                 </div>
                             </div>
 
-                            <details class="pdv-extra-details">
+                            <label class="pdv-payment-extra hidden" id="saleInstallmentsBox">
+                                Parcelas no crédito
+                                <select id="saleInstallments">
+                                    <option value="1">À vista (1x)</option>
+                                    <option value="2">2x</option>
+                                    <option value="3">3x</option>
+                                    <option value="4">4x</option>
+                                    <option value="5">5x</option>
+                                    <option value="6">6x</option>
+                                    <option value="7">7x</option>
+                                    <option value="8">8x</option>
+                                    <option value="9">9x</option>
+                                    <option value="10">10x</option>
+                                    <option value="11">11x</option>
+                                    <option value="12">12x</option>
+                                </select>
+                            </label>
+
+                            <div class="pdv-payment-extra hidden" id="saleCreditBox">
+                                <label>
+                                    Vencimento do fiado
+                                    <input id="saleDueDate" type="date">
+                                </label>
+                                <span class="panel-note">Fiado precisa de cliente: escolha abaixo em "Desconto, cliente e observação".</span>
+                            </div>
+
+                            <details class="pdv-extra-details" id="saleExtraDetails">
                                 <summary>Desconto, cliente e observação</summary>
                                 <div class="pdv-money-grid">
                                     <label>
@@ -1321,12 +1360,16 @@
                                         <input id="saleReceived" type="number" min="0" step="0.01" placeholder="0,00">
                                     </label>
                                 </div>
-                                <label>
-                                    Cliente (opcional)
-                                    <select id="saleCustomer">
-                                        <option value="">Sem cliente</option>
-                                    </select>
-                                </label>
+                                <div class="pdv-customer-row">
+                                    <label>
+                                        Cliente (opcional)
+                                        <select id="saleCustomer">
+                                            <option value="">Sem cliente</option>
+                                        </select>
+                                    </label>
+                                    <button class="button button-secondary" id="quickCustomerButton" type="button">+ Nova</button>
+                                </div>
+                                <div class="pdv-customer-info hidden" id="saleCustomerInfo"></div>
                                 <label>
                                     Observação
                                     <input id="saleNote" type="text" autocomplete="off" placeholder="Ex: retirada na loja">
@@ -1354,6 +1397,302 @@
                 </div>
             </section>
 
+            <section class="view" data-view="salesHistory">
+                <div class="metric-grid">
+                    <article class="metric-card">
+                        <span>Vendido no período</span>
+                        <strong id="salesHistoryRevenue">R$ 0,00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Vendas</span>
+                        <strong id="salesHistoryCount">0</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Ticket médio</span>
+                        <strong id="salesHistoryAverage">R$ 0,00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Peças vendidas</span>
+                        <strong id="salesHistoryUnits">0</strong>
+                    </article>
+                </div>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Últimas vendas</h2>
+                            <span class="panel-note" id="salesHistoryPaymentSummary">Sem vendas no período</span>
+                        </div>
+                        <div class="toolbar">
+                            <input class="search-input" id="salesHistorySearch" type="search" placeholder="Buscar peça, cliente ou nº da venda">
+                            <select class="search-input" id="salesHistoryPeriod" aria-label="Período">
+                                <option value="today">Hoje</option>
+                                <option value="yesterday">Ontem</option>
+                                <option value="7">Últimos 7 dias</option>
+                                <option value="30" selected>Últimos 30 dias</option>
+                                <option value="all">Todas</option>
+                            </select>
+                            <select class="search-input" id="salesHistoryPayment" aria-label="Pagamento">
+                                <option value="all">Todo pagamento</option>
+                                <option value="Pix">Pix</option>
+                                <option value="Dinheiro">Dinheiro</option>
+                                <option value="CartaoDebito">Débito</option>
+                                <option value="CartaoCredito">Crédito</option>
+                                <option value="Fiado">Fiado</option>
+                                <option value="Troca">Troca</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Venda</th>
+                                    <th>Cliente</th>
+                                    <th>Vendedora</th>
+                                    <th>Pagamento</th>
+                                    <th>Itens</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesHistoryTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Vendedoras no período</h2>
+                            <span class="panel-note">Mesmo filtro de período e pagamento das vendas acima. Vendas canceladas e devolvidas não contam.</span>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Vendedora</th>
+                                    <th>Vendas</th>
+                                    <th>Peças</th>
+                                    <th>Vendido</th>
+                                    <th>Ticket médio</th>
+                                    <th>Comissão</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sellerRankingTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <section class="view" data-view="cashRegister">
+                <div class="metric-grid">
+                    <article class="metric-card">
+                        <span>Dinheiro na gaveta (esperado)</span>
+                        <strong id="cashMetricExpected">R$ 0,00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Vendido neste caixa</span>
+                        <strong id="cashMetricSold">R$ 0,00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Vendas</span>
+                        <strong id="cashMetricCount">0</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Fiado recebido</span>
+                        <strong id="cashMetricCredit">R$ 0,00</strong>
+                    </article>
+                </div>
+
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Caixa atual</h2>
+                                <span class="panel-note" id="cashSessionNote">Caixa fechado</span>
+                            </div>
+                            <span class="badge badge-muted" id="cashSessionBadge">Fechado</span>
+                        </div>
+                        <div id="cashSessionBody"></div>
+                    </section>
+
+                    <aside class="panel">
+                        <form class="form-grid" id="cashOpenForm">
+                            <div class="panel-header form-span">
+                                <div>
+                                    <h2>Abrir caixa</h2>
+                                    <span class="panel-note">Conte o troco que está na gaveta antes de começar</span>
+                                </div>
+                            </div>
+                            <label class="form-span">
+                                Troco inicial
+                                <input id="cashOpenValue" type="number" min="0" step="0.01" placeholder="0,00" required>
+                            </label>
+                            <label class="form-span">
+                                Observação
+                                <input id="cashOpenNote" type="text" autocomplete="off" placeholder="Opcional">
+                            </label>
+                            <button class="button button-primary form-action" type="submit">Abrir caixa</button>
+                        </form>
+
+                        <form class="form-grid hidden" id="cashMoveForm">
+                            <div class="panel-header form-span">
+                                <div>
+                                    <h2>Retirada ou reforço</h2>
+                                    <span class="panel-note">Sangria tira dinheiro da gaveta; reforço coloca troco</span>
+                                </div>
+                            </div>
+                            <div class="segmented form-span">
+                                <label><input type="radio" name="cashMoveType" value="Sangria" checked> Sangria (retirada)</label>
+                                <label><input type="radio" name="cashMoveType" value="Reforco"> Reforço (troco)</label>
+                            </div>
+                            <label>
+                                Valor
+                                <input id="cashMoveValue" type="number" min="0.01" step="0.01" placeholder="0,00" required>
+                            </label>
+                            <label>
+                                Motivo
+                                <input id="cashMoveReason" type="text" autocomplete="off" placeholder="Ex: depósito no banco">
+                            </label>
+                            <button class="button button-secondary form-action" type="submit">Registrar</button>
+                        </form>
+
+                        <form class="form-grid hidden" id="cashCloseForm">
+                            <div class="panel-header form-span">
+                                <div>
+                                    <h2>Fechar caixa</h2>
+                                    <span class="panel-note">Conte o dinheiro da gaveta e digite o valor</span>
+                                </div>
+                            </div>
+                            <label class="form-span">
+                                Dinheiro contado na gaveta
+                                <input id="cashCloseValue" type="number" min="0" step="0.01" placeholder="0,00" required>
+                            </label>
+                            <div class="cash-diff form-span" id="cashClosePreview"></div>
+                            <label class="form-span">
+                                Observação
+                                <input id="cashCloseNote" type="text" autocomplete="off" placeholder="Ex: faltou troco de R$ 2">
+                            </label>
+                            <button class="button button-danger form-action" type="submit">Fechar caixa</button>
+                        </form>
+                    </aside>
+                </div>
+
+                <section class="panel">
+                    <div class="panel-header">
+                        <h2>Fechamentos anteriores</h2>
+                        <span class="panel-note">Últimos 60 caixas</span>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Abertura</th>
+                                    <th>Fechamento</th>
+                                    <th>Vendido</th>
+                                    <th>Esperado</th>
+                                    <th>Contado</th>
+                                    <th>Diferença</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cashHistoryTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <section class="view" data-view="credit">
+                <div class="metric-grid">
+                    <article class="metric-card">
+                        <span>Total a receber</span>
+                        <strong id="creditMetricOpen">R$ 0,00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Clientes devendo</span>
+                        <strong id="creditMetricCustomers">0</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Em atraso</span>
+                        <strong id="creditMetricLate">R$ 0,00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Recebido (histórico)</span>
+                        <strong id="creditMetricPaid">R$ 0,00</strong>
+                    </article>
+                </div>
+
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Clientes no fiado</h2>
+                                <span class="panel-note" id="creditCount">0 clientes</span>
+                            </div>
+                            <div class="toolbar">
+                                <input class="search-input" id="creditSearch" type="search" placeholder="Buscar cliente">
+                                <select class="search-input" id="creditFilter" aria-label="Filtrar fiado">
+                                    <option value="open">Com saldo</option>
+                                    <option value="late">Em atraso</option>
+                                    <option value="all">Todos (inclui quitados)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Saldo</th>
+                                        <th>Vencimento</th>
+                                        <th>Última compra</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="creditTable"></tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <aside class="panel" id="creditStatementPanel">
+                        <div class="panel-header">
+                            <div>
+                                <h2 id="creditStatementTitle">Extrato</h2>
+                                <span class="panel-note" id="creditStatementNote">Escolha uma cliente na lista</span>
+                            </div>
+                        </div>
+
+                        <form class="form-grid hidden" id="creditPaymentForm">
+                            <label>
+                                Valor recebido
+                                <input id="creditPaymentValue" type="number" min="0.01" step="0.01" placeholder="0,00" required>
+                            </label>
+                            <label>
+                                Forma
+                                <select id="creditPaymentMethod">
+                                    <option value="Dinheiro">Dinheiro</option>
+                                    <option value="Pix">Pix</option>
+                                    <option value="CartaoDebito">Cartão débito</option>
+                                    <option value="CartaoCredito">Cartão crédito</option>
+                                </select>
+                            </label>
+                            <label class="form-span">
+                                Observação
+                                <input id="creditPaymentNote" type="text" autocomplete="off" placeholder="Opcional">
+                            </label>
+                            <div class="toolbar form-span">
+                                <button class="button button-primary" type="submit">Receber pagamento</button>
+                                <button class="button button-ghost" id="creditPayAllButton" type="button">Quitar tudo</button>
+                            </div>
+                        </form>
+
+                        <div class="compact-list" id="creditStatementList"></div>
+                    </aside>
+                </div>
+            </section>
+
             <section class="view" data-view="stock">
                 <div class="metric-grid">
                     <article class="metric-card">
@@ -1373,6 +1712,52 @@
                         <strong id="stockMetricProfit">R$ 0,00</strong>
                     </article>
                 </div>
+
+                <section class="panel" id="stockCountPanel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Contagem de estoque</h2>
+                            <span class="panel-note">Conte as peças da loja (digitando ou bipando o código). Só as linhas preenchidas são ajustadas. A contagem fica salva neste aparelho até você aplicar.</span>
+                        </div>
+                        <button class="button button-secondary" id="stockCountToggle" type="button">Começar contagem</button>
+                    </div>
+
+                    <div class="stock-count-body hidden" id="stockCountBody">
+                        <div class="toolbar stock-count-toolbar">
+                            <input class="search-input" id="stockCountScan" type="text" autocomplete="off" placeholder="Bipar código da etiqueta (soma 1)">
+                            <input class="search-input" id="stockCountSearch" type="search" placeholder="Buscar produto">
+                            <select class="search-input" id="stockCountCategory" aria-label="Categoria da contagem">
+                                <option value="">Todas as categorias</option>
+                            </select>
+                            <label class="checkbox-line">
+                                <input id="stockCountOnlyDiff" type="checkbox">
+                                Só diferenças
+                            </label>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Produto</th>
+                                        <th>Variação</th>
+                                        <th>Código</th>
+                                        <th>Sistema</th>
+                                        <th>Contado</th>
+                                        <th>Diferença</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stockCountTable"></tbody>
+                            </table>
+                        </div>
+                        <div class="stock-count-footer">
+                            <span class="panel-note" id="stockCountSummary">Nenhuma linha contada.</span>
+                            <div class="toolbar">
+                                <button class="button button-ghost" id="stockCountClear" type="button">Limpar contagem</button>
+                                <button class="button button-primary" id="stockCountApply" type="button">Aplicar ajustes</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
                 <section class="panel">
                     <div class="panel-header">
@@ -1616,11 +2001,15 @@
 
                     <aside class="panel">
                         <div class="panel-header">
-                            <h2>Novo cliente</h2>
-                            <span class="panel-note">Cadastro rápido, sem login</span>
+                            <div>
+                                <h2 id="customerFormTitle">Novo cliente</h2>
+                                <span class="panel-note">Cadastro rápido, sem login</span>
+                            </div>
+                            <button class="button button-ghost hidden" id="cancelCustomerEditButton" type="button">Cancelar edição</button>
                         </div>
 
                         <form class="form-grid" id="customerForm">
+                            <input type="hidden" id="customerIdInput">
                             <label class="form-span">
                                 Nome
                                 <input id="customerNameInput" type="text" autocomplete="off" required>
@@ -1633,7 +2022,11 @@
                                 E-mail (opcional)
                                 <input id="customerEmailInput" type="email" autocomplete="off" placeholder="Deixe vazio se não tiver">
                             </label>
-                            <button class="button button-primary form-action" type="submit">Adicionar cliente</button>
+                            <label>
+                                Aniversário (opcional)
+                                <input id="customerBirthInput" type="date">
+                            </label>
+                            <button class="button button-primary form-action" id="customerSubmitButton" type="submit">Adicionar cliente</button>
                         </form>
 
                         <div class="panel-header">
@@ -1642,6 +2035,27 @@
                         </div>
                         <div class="payment-summary" id="customerSummary"></div>
                     </aside>
+                </div>
+
+                <div class="workspace-grid">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Aniversariantes</h2>
+                                <span class="panel-note">Próximos 30 dias. Mande uma mensagem com um mimo ou desconto.</span>
+                            </div>
+                        </div>
+                        <div class="compact-list" id="customerBirthdayList"></div>
+                    </section>
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Sumidas</h2>
+                                <span class="panel-note">Compraram antes, mas não voltam há mais de 60 dias</span>
+                            </div>
+                        </div>
+                        <div class="compact-list" id="customerInactiveList"></div>
+                    </section>
                 </div>
             </section>
 
@@ -1682,6 +2096,7 @@
                                 <option value="Pix">Pix</option>
                                 <option value="CartaoDebito">Cartão débito</option>
                                 <option value="CartaoCredito">Cartão crédito</option>
+                                <option value="Fiado">Fiado</option>
                             </select>
                         </label>
                     </div>
@@ -1863,6 +2278,41 @@
                         <div class="compact-list" id="panelUserList"></div>
                     </section>
                 </div>
+
+                <div class="workspace-grid workspace-grid-wide">
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div>
+                                <h2>Vendedoras</h2>
+                                <span class="panel-note" id="sellerFormMode">Aparecem no PDV pra marcar quem vendeu e calcular comissão</span>
+                            </div>
+                            <button class="button button-ghost hidden" id="cancelSellerEditButton" type="button">Cancelar edição</button>
+                        </div>
+                        <form class="form-grid" id="sellerForm">
+                            <input type="hidden" id="sellerIdInput">
+                            <label>
+                                Nome
+                                <input id="sellerNameInput" type="text" autocomplete="off" placeholder="Ex: Ana" required>
+                            </label>
+                            <label>
+                                Comissão (%)
+                                <input id="sellerCommissionInput" type="number" min="0" max="100" step="0.1" value="0">
+                            </label>
+                            <label class="checkbox-line">
+                                <input id="sellerActiveInput" type="checkbox" checked>
+                                Ativa
+                            </label>
+                            <button class="button button-primary form-action" type="submit">Salvar vendedora</button>
+                        </form>
+                    </section>
+                    <section class="panel">
+                        <div class="panel-header">
+                            <h2>Equipe de vendas</h2>
+                            <span class="panel-note" id="sellerCount">0 vendedoras</span>
+                        </div>
+                        <div class="compact-list" id="sellerList"></div>
+                    </section>
+                </div>
             </section>
         </main>
     </div>
@@ -1892,6 +2342,46 @@
         </form>
     </div>
 
+    <div class="return-modal hidden" id="cancelSaleModal" role="dialog" aria-modal="true" aria-labelledby="cancelSaleTitle">
+        <form class="return-modal-card" id="cancelSaleForm">
+            <div class="panel-header">
+                <div>
+                    <h2 id="cancelSaleTitle">Cancelar venda</h2>
+                    <span class="panel-note" id="cancelSaleSummary"></span>
+                </div>
+                <button class="button button-ghost" id="closeCancelSaleButton" type="button">Fechar</button>
+            </div>
+            <p class="panel-note">Use quando a venda foi lançada errado. As peças voltam pro estoque e a venda sai de todos os relatórios. Pra cliente que devolveu peça, use Devolver.</p>
+            <label>
+                Motivo
+                <textarea id="cancelSaleReason" rows="3" placeholder="Ex: lancei o produto errado" required></textarea>
+            </label>
+            <button class="button button-danger button-full" type="submit">Cancelar venda</button>
+        </form>
+    </div>
+
+    <div class="return-modal hidden" id="quickCustomerModal" role="dialog" aria-modal="true" aria-labelledby="quickCustomerTitle">
+        <form class="return-modal-card" id="quickCustomerForm">
+            <div class="panel-header">
+                <h2 id="quickCustomerTitle">Nova cliente</h2>
+                <button class="button button-ghost" id="closeQuickCustomerButton" type="button">Fechar</button>
+            </div>
+            <label>
+                Nome
+                <input id="quickCustomerName" type="text" autocomplete="off" required>
+            </label>
+            <label>
+                Telefone / WhatsApp
+                <input id="quickCustomerPhone" type="tel" autocomplete="off" placeholder="(35) 99999-9999">
+            </label>
+            <label>
+                Aniversário (opcional)
+                <input id="quickCustomerBirth" type="date">
+            </label>
+            <button class="button button-primary button-full" type="submit">Cadastrar e usar na venda</button>
+        </form>
+    </div>
+
     <div class="receipt-modal hidden" id="receiptModal" role="dialog" aria-modal="true" aria-labelledby="receiptModalTitle">
         <div class="receipt-modal-card">
             <div class="panel-header">
@@ -1905,6 +2395,8 @@
     <div class="label-print-area" id="labelPrintArea"></div>
 
     <script src="/barcode.js?v=20260829-1" defer></script>
-    <script src="/app.js?v=20260903-3" defer></script>
+    <!-- operacao.js só declara funções; vem antes porque o app.js referencia elas ao montar o scopeRenderers. -->
+    <script src="/operacao.js?v=20260929-2" defer></script>
+    <script src="/app.js?v=20260929-2" defer></script>
 </body>
 </html>

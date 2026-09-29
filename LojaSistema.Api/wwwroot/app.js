@@ -30,7 +30,14 @@ const state = {
     customerSearch: "",
     onlineOrderStatusFilter: "all",
     returningSaleId: null,
-    returnMode: "return"
+    returnMode: "return",
+    cash: null,
+    cashHistory: [],
+    credit: [],
+    sellers: [],
+    creditSelectedId: null,
+    creditStatement: null,
+    cancelingSaleId: null
 };
 
 const currency = new Intl.NumberFormat("pt-BR", {
@@ -56,6 +63,9 @@ const viewTitles = {
     legalSettings: "Legal e domínio",
     siteContact: "Contato do site",
     pdv: "PDV",
+    salesHistory: "Vendas",
+    cashRegister: "Caixa",
+    credit: "Fiado",
     stock: "Estoque",
     onlineOrders: "Pedidos online",
     customers: "Clientes",
@@ -66,12 +76,12 @@ const viewTitles = {
 const roleConfigs = {
     Admin: {
         label: "Administrador",
-        views: ["dashboard", "products", "storefront", "siteImages", "paymentSettings", "shippingSettings", "emailSettings", "legalSettings", "siteContact", "pdv", "stock", "onlineOrders", "customers", "reports", "users"],
+        views: ["dashboard", "products", "storefront", "siteImages", "paymentSettings", "shippingSettings", "emailSettings", "legalSettings", "siteContact", "pdv", "salesHistory", "cashRegister", "credit", "stock", "onlineOrders", "customers", "reports", "users"],
         permissions: ["readProducts", "manageProducts", "manageStorefront", "usePdv", "manageStock", "viewOnlineOrders", "viewCustomers", "viewReports", "manageUsers"]
     },
     Caixa: {
         label: "Caixa",
-        views: ["dashboard", "pdv"],
+        views: ["dashboard", "pdv", "salesHistory", "cashRegister", "credit"],
         permissions: ["readProducts", "usePdv"]
     },
     Estoque: {
@@ -90,7 +100,9 @@ let siteImageObjectUrls = [];
 
 document.addEventListener("DOMContentLoaded", () => {
     cacheElements();
+    cacheOperacaoElements();
     bindEvents();
+    bindOperacaoEvents();
     refreshAll();
 });
 
@@ -408,6 +420,15 @@ function cacheElements() {
     els.reportIndicators = document.querySelector("#reportIndicators");
     els.reportExportActions = document.querySelector("#reportExportActions");
     els.salesTable = document.querySelector("#salesTable");
+    els.salesHistoryTable = document.querySelector("#salesHistoryTable");
+    els.salesHistorySearch = document.querySelector("#salesHistorySearch");
+    els.salesHistoryPeriod = document.querySelector("#salesHistoryPeriod");
+    els.salesHistoryPayment = document.querySelector("#salesHistoryPayment");
+    els.salesHistoryRevenue = document.querySelector("#salesHistoryRevenue");
+    els.salesHistoryCount = document.querySelector("#salesHistoryCount");
+    els.salesHistoryAverage = document.querySelector("#salesHistoryAverage");
+    els.salesHistoryUnits = document.querySelector("#salesHistoryUnits");
+    els.salesHistoryPaymentSummary = document.querySelector("#salesHistoryPaymentSummary");
     els.salesCount = document.querySelector("#salesCount");
     els.ordersTable = document.querySelector("#ordersTable");
     els.ordersCount = document.querySelector("#ordersCount");
@@ -802,28 +823,11 @@ function bindEvents() {
         }
     });
 
-    els.salesTable.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-sale-action]");
-        if (!button) {
-            return;
-        }
-
-        if (button.dataset.saleAction === "receipt") {
-            const sale = state.sales.find((item) => item.id === button.dataset.id);
-            if (sale) {
-                state.lastReceipt = sale;
-                renderReceipt(sale);
-                showView("pdv");
-            }
-        }
-
-        if (button.dataset.saleAction === "return") {
-            openReturnDialog(button.dataset.id, "return");
-        }
-
-        if (button.dataset.saleAction === "exchange") {
-            openReturnDialog(button.dataset.id, "exchange");
-        }
+    els.salesTable.addEventListener("click", handleSaleActionClick);
+    els.salesHistoryTable.addEventListener("click", handleSaleActionClick);
+    els.salesHistorySearch.addEventListener("input", renderSalesHistory);
+    [els.salesHistoryPeriod, els.salesHistoryPayment].forEach((input) => {
+        input.addEventListener("change", renderSalesHistory);
     });
 
     els.receiptBox.addEventListener("click", (event) => {
@@ -906,7 +910,11 @@ const stateLoaders = {
     deliveryOptions: async () => { state.deliveryOptions = can("manageStorefront") ? await api("/opcoes-entrega") : []; },
     panelUsers: async () => { state.panelUsers = can("manageUsers") ? await api("/usuarios-painel") : []; },
     activities: async () => { state.activities = can("manageUsers") ? await api("/atividades-painel") : []; },
-    backups: async () => { state.backups = can("viewReports") ? await api("/backup/arquivos") : []; }
+    backups: async () => { state.backups = can("viewReports") ? await api("/backup/arquivos") : []; },
+    cash: async () => { state.cash = can("usePdv") ? (await api("/caixa/atual")).caixa : null; },
+    cashHistory: async () => { state.cashHistory = can("usePdv") ? await api("/caixa/historico") : []; },
+    credit: async () => { state.credit = can("usePdv") ? await api("/fiado") : []; },
+    sellers: async () => { state.sellers = can("usePdv") ? await api("/vendedores") : []; }
 };
 
 // Quais telas dependem de cada fatia de estado, pra redesenhar só o necessário.
@@ -931,21 +939,36 @@ const scopeRenderers = {
     movements: [["manageStock", renderStock]],
     sales: [
         ["viewReports", renderReports],
-        ["usePdv", renderCart]
+        ["usePdv", renderCart],
+        ["usePdv", renderSalesHistory]
     ],
     orders: [
         ["viewOnlineOrders", renderOnlineOrders],
         ["viewReports", renderReports]
     ],
     customers: [["viewCustomers", renderCustomers]],
-    customersSimple: [["usePdv", renderPdvCustomerOptions]],
+    customersSimple: [
+        ["usePdv", renderPdvCustomerOptions],
+        ["usePdv", renderSaleCustomerInfo]
+    ],
     summary: [["viewReports", renderReports]],
     siteConfig: [["manageStorefront", renderSiteConfig]],
     coupons: [["manageStorefront", renderCoupons]],
     deliveryOptions: [["manageStorefront", renderDeliveryOptions]],
     panelUsers: [["manageUsers", renderPanelUsers]],
     activities: [],
-    backups: [["viewReports", renderReports]]
+    backups: [["viewReports", renderReports]],
+    cash: [
+        ["usePdv", renderCashRegister],
+        ["usePdv", renderPdvCashStatus]
+    ],
+    cashHistory: [["usePdv", renderCashRegister]],
+    credit: [["usePdv", renderCredit]],
+    sellers: [
+        ["usePdv", renderSellerOptions],
+        ["usePdv", renderSalesHistory],
+        ["manageUsers", renderSellers]
+    ]
 };
 
 async function refreshAll() {
@@ -1077,6 +1100,13 @@ function renderAll() {
         renderPdvProducts();
         renderCart();
         renderPdvCustomerOptions();
+        renderSellerOptions();
+        renderSalesHistory();
+        renderCashRegister();
+        renderPdvCashStatus();
+        renderCredit();
+        updatePdvPaymentExtras();
+        renderSaleCustomerInfo();
     }
     if (can("manageStock")) {
         renderStock();
@@ -1092,6 +1122,7 @@ function renderAll() {
     }
     if (can("manageUsers")) {
         renderPanelUsers();
+        renderSellers();
     }
 }
 
@@ -1167,7 +1198,9 @@ function renderDashboard() {
                     <strong>${currency.format(sale.total)}</strong>
                     <span>${formatPayment(sale.formaPagamento)} · ${formatDate(sale.criadaEm)}</span>
                 </div>
-                ${sale.devolvida
+                ${sale.cancelada
+                    ? '<span class="badge badge-danger">Cancelada</span>'
+                    : sale.devolvida
                     ? '<span class="badge badge-muted">Devolvida</span>'
                     : sale.devolucaoParcial
                         ? '<span class="badge badge-warn">Parcial</span>'
@@ -2379,6 +2412,7 @@ function stockQuantityBadge(quantidade) {
 }
 
 function renderStock() {
+    renderStockCount();
     renderSuppliers();
     renderStockProductPicker();
     renderStockValueSummary();
@@ -2852,6 +2886,8 @@ function renderCustomers() {
     els.customerList.innerHTML = customers.length
         ? customers.map(renderCustomerCard).join("")
         : `<div class="empty-state">Nenhum cliente encontrado.</div>`;
+
+    renderCustomerRelationship();
 }
 
 function getFilteredCustomers() {
@@ -2918,6 +2954,7 @@ function renderCustomerCard(customer) {
                     <small>Última compra: ${lastOrder}</small>
                 </div>
             </div>
+            ${renderCustomerCardExtras(customer)}
         </article>
     `;
 }
@@ -3095,6 +3132,139 @@ function renderReports() {
             </tr>
         `).join("")
         : `<tr><td colspan="6"><div class="empty-state">Nenhuma venda registrada.</div></td></tr>`;
+}
+
+function handleSaleActionClick(event) {
+    const button = event.target.closest("[data-sale-action]");
+    if (!button) {
+        return;
+    }
+
+    if (button.dataset.saleAction === "receipt") {
+        const sale = state.sales.find((item) => item.id === button.dataset.id);
+        if (sale) {
+            state.lastReceipt = sale;
+            renderReceipt(sale);
+        }
+    }
+
+    if (button.dataset.saleAction === "return") {
+        openReturnDialog(button.dataset.id, "return");
+    }
+
+    if (button.dataset.saleAction === "exchange") {
+        openReturnDialog(button.dataset.id, "exchange");
+    }
+
+    if (button.dataset.saleAction === "cancel") {
+        openCancelSaleDialog(button.dataset.id);
+    }
+}
+
+function getSalesHistoryStart(period) {
+    if (period === "all") {
+        return null;
+    }
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    if (period === "yesterday") {
+        start.setDate(start.getDate() - 1);
+    } else if (period !== "today") {
+        start.setDate(start.getDate() - (Number(period) - 1));
+    }
+
+    return start;
+}
+
+function formatSaleCode(sale) {
+    return `#${sale.id.slice(0, 8).toUpperCase()}`;
+}
+
+function renderSalesHistory() {
+    const period = els.salesHistoryPeriod.value;
+    const payment = els.salesHistoryPayment.value;
+    const term = normalize(els.salesHistorySearch.value);
+    const start = getSalesHistoryStart(period);
+    const end = period === "yesterday" ? getSalesHistoryStart("today") : null;
+
+    const sales = state.sales.filter((sale) => {
+        const date = new Date(sale.criadaEm);
+        if (start && date < start) {
+            return false;
+        }
+
+        if (end && date >= end) {
+            return false;
+        }
+
+        if (payment !== "all" && sale.formaPagamento !== payment) {
+            return false;
+        }
+
+        if (!term) {
+            return true;
+        }
+
+        const haystack = normalize([
+            formatSaleCode(sale),
+            sale.clienteNome,
+            sale.observacao,
+            ...sale.itens.map((item) => `${item.produtoNome} ${formatPdvVariation(item)}`)
+        ].filter(Boolean).join(" "));
+        return haystack.includes(term);
+    });
+
+    const activeSales = sales.filter((sale) => !sale.devolvida);
+    const revenue = activeSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+    const units = activeSales.reduce((sum, sale) => sum + sale.itens.reduce((acc, item) => acc + getSaleItemRemaining(item), 0), 0);
+    els.salesHistoryRevenue.textContent = currency.format(revenue);
+    els.salesHistoryCount.textContent = activeSales.length;
+    els.salesHistoryAverage.textContent = currency.format(activeSales.length ? revenue / activeSales.length : 0);
+    els.salesHistoryUnits.textContent = units;
+
+    const byPayment = new Map();
+    activeSales.forEach((sale) => {
+        byPayment.set(sale.formaPagamento, (byPayment.get(sale.formaPagamento) || 0) + Number(sale.total || 0));
+    });
+    els.salesHistoryPaymentSummary.textContent = byPayment.size
+        ? [...byPayment.entries()].map(([key, value]) => `${formatPayment(key)} ${currency.format(value)}`).join(" · ")
+        : "Sem vendas no período";
+
+    els.salesHistoryTable.innerHTML = sales.length
+        ? sales.map((sale) => `
+            <tr>
+                <td>
+                    <strong>${formatDate(sale.criadaEm)}</strong><br>
+                    <span class="panel-note">${formatSaleCode(sale)}</span>
+                </td>
+                <td>
+                    ${sale.clienteNome ? escapeHtml(sale.clienteNome) : '<span class="panel-note">Sem cliente</span>'}
+                    ${sale.observacao ? `<br><span class="panel-note">${escapeHtml(sale.observacao)}</span>` : ""}
+                    ${sale.cancelada && sale.motivoCancelamento ? `<br><span class="panel-note">Cancelada: ${escapeHtml(sale.motivoCancelamento)}</span>` : ""}
+                </td>
+                <td>${sale.vendedorNome ? escapeHtml(sale.vendedorNome) : '<span class="panel-note">-</span>'}</td>
+                <td>${formatSalePayment(sale)}</td>
+                <td>${sale.itens.map(formatSaleItem).join("<br>")}</td>
+                <td>
+                    <strong>${currency.format(sale.total)}</strong>
+                    ${sale.valorDevolvido ? `<br><span class="panel-note">Devolvido ${currency.format(sale.valorDevolvido)}</span>` : ""}
+                    ${sale.desconto ? `<br><span class="panel-note">Desc. ${currency.format(sale.desconto)}</span>` : ""}
+                </td>
+                <td>${formatSaleStatusBadge(sale)}</td>
+                <td>
+                    <div class="table-actions">
+                        <button class="button button-secondary" type="button" data-sale-action="receipt" data-id="${sale.id}">Comprovante</button>
+                        <button class="button button-secondary" type="button" data-sale-action="exchange" data-id="${sale.id}" ${sale.devolvida ? "disabled" : ""}>Trocar</button>
+                        <button class="button button-danger" type="button" data-sale-action="return" data-id="${sale.id}" ${sale.devolvida ? "disabled" : ""}>${sale.devolucaoParcial ? "Nova devolução" : "Devolver"}</button>
+                        ${canCancelSale(sale) ? `<button class="button button-ghost" type="button" data-sale-action="cancel" data-id="${sale.id}">Cancelar</button>` : ""}
+                    </div>
+                </td>
+            </tr>
+        `).join("")
+        : `<tr><td colspan="8"><div class="empty-state">Nenhuma venda encontrada nesse filtro.</div></td></tr>`;
+
+    renderSellerRanking(activeSales);
 }
 
 function renderBackups() {
@@ -3771,18 +3941,20 @@ async function saveSupplier(event) {
 async function saveCustomer(event) {
     event.preventDefault();
 
+    const editingId = els.customerIdInput.value;
     try {
-        await api("/clientes-painel", {
-            method: "POST",
+        await api(editingId ? `/clientes-painel/${editingId}` : "/clientes-painel", {
+            method: editingId ? "PUT" : "POST",
             body: JSON.stringify({
                 nome: els.customerNameInput.value.trim(),
                 telefone: emptyToNull(els.customerPhoneInput.value),
-                email: emptyToNull(els.customerEmailInput.value)
+                email: emptyToNull(els.customerEmailInput.value),
+                dataNascimento: emptyToNull(els.customerBirthInput.value)
             })
         });
 
-        els.customerForm.reset();
-        showToast("Cliente cadastrado.");
+        resetCustomerForm();
+        showToast(editingId ? "Cliente atualizado." : "Cliente cadastrado.");
         await refreshScoped(["customers", "customersSimple"]);
     } catch (error) {
         showToast(error.message);
@@ -4152,6 +4324,13 @@ async function finishSale() {
         return;
     }
 
+    if (formaPagamento === "Fiado" && !els.saleCustomer.value) {
+        els.saleExtraDetails.open = true;
+        els.saleCustomer.focus();
+        showToast("Fiado precisa de cliente. Escolha ou cadastre a cliente.");
+        return;
+    }
+
     try {
         const sale = await api("/pdv/vendas", {
             method: "POST",
@@ -4161,6 +4340,9 @@ async function finishSale() {
                 valorRecebido: valorRecebido || total,
                 observacao: emptyToNull(els.saleNote.value),
                 clienteId: emptyToNull(els.saleCustomer.value),
+                parcelas: formaPagamento === "CartaoCredito" ? Number(els.saleInstallments.value || 1) : 1,
+                vendedorId: emptyToNull(els.saleSeller.value),
+                vencimentoEm: formaPagamento === "Fiado" ? emptyToNull(els.saleDueDate.value) : null,
                 itens: state.cart.map((item) => ({
                     produtoId: item.produtoId,
                     quantidade: item.quantidade,
@@ -4177,8 +4359,9 @@ async function finishSale() {
         els.saleReceived.value = "";
         els.saleNote.value = "";
         els.saleCustomer.value = "";
+        resetPdvPaymentExtras();
         showToast("Venda finalizada e estoque atualizado.");
-        await refreshScoped(["products", "movements", "sales", "summary", "customers"]);
+        await refreshScoped(["products", "movements", "sales", "summary", "customers", "customersSimple", "cash", "credit"]);
         renderReceipt(sale);
     } catch (error) {
         showToast(error.message);
@@ -4306,7 +4489,7 @@ async function submitReturnSale(event) {
 
         showToast("Venda devolvida e estoque atualizado.");
         closeReturnDialog();
-        await refreshScoped(["products", "movements", "sales", "summary", "customers"]);
+        await refreshScoped(["products", "movements", "sales", "summary", "customers", "customersSimple", "cash", "credit"]);
     } catch (error) {
         showToast(error.message || "Não foi possível devolver a venda.");
     }
@@ -4356,9 +4539,17 @@ function renderReceipt(sale) {
             <span>${formatDate(sale.criadaEm)}</span>
         </div>
         <div class="receipt-meta">
-            <span>${formatPayment(sale.formaPagamento)}</span>
-            ${sale.devolvida ? '<span class="badge badge-muted">Venda devolvida</span>' : '<span class="badge badge-ok">Venda concluída</span>'}
+            <span>${formatSalePayment(sale)}</span>
+            ${sale.cancelada
+                ? '<span class="badge badge-danger">Venda cancelada</span>'
+                : sale.devolvida ? '<span class="badge badge-muted">Venda devolvida</span>' : '<span class="badge badge-ok">Venda concluída</span>'}
         </div>
+        ${sale.clienteNome || sale.vendedorNome ? `
+            <div class="receipt-meta">
+                <span>${sale.clienteNome ? `Cliente: ${escapeHtml(sale.clienteNome)}` : ""}</span>
+                <span>${sale.vendedorNome ? `Vendedora: ${escapeHtml(sale.vendedorNome)}` : ""}</span>
+            </div>
+        ` : ""}
         <div class="receipt-lines">
             ${sale.itens.map((item) => {
                 const variation = formatPdvVariation(item);
@@ -4396,17 +4587,25 @@ function renderReceipt(sale) {
                 <strong>${currency.format(sale.total)}</strong>
             </div>
         ` : ""}
-        <div class="receipt-total">
-            <span>Recebido</span>
-            <strong>${currency.format(sale.valorRecebido || sale.total)}</strong>
-        </div>
-        <div class="receipt-total">
-            <span>Troco</span>
-            <strong>${currency.format(sale.troco || 0)}</strong>
-        </div>
+        ${sale.formaPagamento === "Fiado" ? `
+            <div class="receipt-total">
+                <span>No fiado · vence em</span>
+                <strong>${formatShortDate(sale.vencimentoEm)}</strong>
+            </div>
+        ` : `
+            <div class="receipt-total">
+                <span>Recebido</span>
+                <strong>${currency.format(sale.valorRecebido || sale.total)}</strong>
+            </div>
+            <div class="receipt-total">
+                <span>Troco</span>
+                <strong>${currency.format(sale.troco || 0)}</strong>
+            </div>
+        `}
         <p>Obrigado pela preferência.</p>
         ${sale.observacao ? `<p>${escapeHtml(sale.observacao)}</p>` : ""}
-        ${sale.devolvida && sale.motivoDevolucao ? `<p>Devolução: ${escapeHtml(sale.motivoDevolucao)}</p>` : ""}
+        ${sale.cancelada && sale.motivoCancelamento ? `<p>Cancelada: ${escapeHtml(sale.motivoCancelamento)}</p>` : ""}
+        ${!sale.cancelada && sale.devolvida && sale.motivoDevolucao ? `<p>Devolução: ${escapeHtml(sale.motivoDevolucao)}</p>` : ""}
         <div class="receipt-actions">
             <button class="button button-secondary" type="button" data-receipt-action="copy">Copiar</button>
             <button class="button button-secondary" type="button" data-receipt-action="print">Imprimir</button>
@@ -4530,8 +4729,10 @@ function buildSaleReceiptText(sale) {
         "Nana Modas",
         `Comprovante ${shortId}`,
         `Data: ${formatDate(sale.criadaEm)}`,
-        `Pagamento: ${formatPayment(sale.formaPagamento)}`,
-        sale.devolvida ? "Status: Venda devolvida" : "Status: Venda concluída",
+        `Pagamento: ${formatSalePayment(sale)}`,
+        sale.clienteNome ? `Cliente: ${sale.clienteNome}` : null,
+        sale.vendedorNome ? `Vendedora: ${sale.vendedorNome}` : null,
+        sale.cancelada ? "Status: Venda cancelada" : sale.devolvida ? "Status: Venda devolvida" : "Status: Venda concluída",
         "",
         "Itens:",
         items,
@@ -4541,8 +4742,9 @@ function buildSaleReceiptText(sale) {
         `Total: ${currency.format(sale.totalOriginal ?? sale.total)}`,
         sale.valorDevolvido ? `Devolvido: ${currency.format(sale.valorDevolvido)}` : null,
         sale.valorDevolvido ? `Total líquido: ${currency.format(sale.total)}` : null,
-        `Recebido: ${currency.format(sale.valorRecebido || sale.total)}`,
-        `Troco: ${currency.format(sale.troco || 0)}`,
+        sale.formaPagamento === "Fiado" ? `No fiado, vence em ${formatShortDate(sale.vencimentoEm)}` : `Recebido: ${currency.format(sale.valorRecebido || sale.total)}`,
+        sale.formaPagamento === "Fiado" ? null : `Troco: ${currency.format(sale.troco || 0)}`,
+        sale.cancelada && sale.motivoCancelamento ? `Cancelada: ${sale.motivoCancelamento}` : null,
         sale.observacao ? `Observação: ${sale.observacao}` : null,
         sale.devolvida && sale.motivoDevolucao ? `Devolução: ${sale.motivoDevolucao}` : null,
         "",
@@ -5741,7 +5943,8 @@ function formatPayment(payment) {
         Pix: "Pix",
         CartaoDebito: "Cartão débito",
         CartaoCredito: "Cartão crédito",
-        Troca: "Troca"
+        Troca: "Troca",
+        Fiado: "Fiado"
     };
     return names[payment] || payment;
 }
@@ -5953,6 +6156,10 @@ function getSaleItemRemaining(item) {
 }
 
 function formatSaleStatusBadge(sale) {
+    if (sale.cancelada) {
+        return '<span class="badge badge-danger">Cancelada</span>';
+    }
+
     if (sale.devolvida) {
         return '<span class="badge badge-muted">Devolvida</span>';
     }

@@ -6,5 +6,6 @@ public enum FormaPagamento
     Pix,
     CartaoDebito,
     CartaoCredito,
-    Troca
+    Troca,
+    Fiado
 }

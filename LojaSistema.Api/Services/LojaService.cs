@@ -13,7 +13,7 @@ using Microsoft.Data.Sqlite;
 
 namespace LojaSistema.Api.Services;
 
-public sealed class LojaService
+public sealed partial class LojaService
 {
     private readonly object _sync = new();
     private readonly Dictionary<Guid, Categoria> _categorias = [];
@@ -59,6 +59,7 @@ public sealed class LojaService
             DataSource = _databasePath
         }.ToString();
 
+        CriarBackupAntesDaAtualizacaoSeNecessario();
         InicializarBanco();
         CarregarDados();
 
@@ -814,9 +815,27 @@ public sealed class LojaService
     {
         lock (_sync)
         {
+            var vendasPorCliente = _vendasLoja
+                .Where(venda => venda.ClienteId is not null && !venda.Devolvida)
+                .GroupBy(venda => venda.ClienteId!.Value)
+                .ToDictionary(grupo => grupo.Key, grupo => grupo.ToList());
+            var saldos = CalcularSaldosFiado();
+
             return _clientes.Values
                 .OrderBy(cliente => cliente.Nome)
-                .Select(cliente => new ClienteSimplesResponse(cliente.Id, cliente.Nome, cliente.Telefone))
+                .Select(cliente =>
+                {
+                    var vendas = vendasPorCliente.GetValueOrDefault(cliente.Id) ?? [];
+                    return new ClienteSimplesResponse(
+                        cliente.Id,
+                        cliente.Nome,
+                        cliente.Telefone,
+                        cliente.DataNascimento,
+                        vendas.Count,
+                        vendas.Sum(venda => venda.Total),
+                        vendas.Count > 0 ? vendas.Max(venda => venda.CriadaEm) : null,
+                        saldos.GetValueOrDefault(cliente.Id));
+                })
                 .ToList();
         }
     }
@@ -848,6 +867,11 @@ public sealed class LojaService
             return Resultado<ClientePainelResponse>.Falha("Informe um e-mail valido ou deixe em branco.");
         }
 
+        if (!string.IsNullOrWhiteSpace(request.DataNascimento) && NormalizarDataNascimento(request.DataNascimento) is null)
+        {
+            return Resultado<ClientePainelResponse>.Falha("Data de nascimento invalida.");
+        }
+
         lock (_sync)
         {
             if (emailInformado is not null &&
@@ -864,6 +888,7 @@ public sealed class LojaService
                 Nome = nome,
                 Email = email,
                 Telefone = telefone,
+                DataNascimento = NormalizarDataNascimento(request.DataNascimento),
                 SenhaHash = CriarHashSenha(senhaAleatoria)
             };
 
@@ -920,7 +945,9 @@ public sealed class LojaService
             origemUltimaCompra,
             ultimoPedido?.Status,
             cliente.CriadoEm,
-            cliente.AtualizadoEm);
+            cliente.AtualizadoEm,
+            cliente.DataNascimento,
+            CalcularSaldosFiado().GetValueOrDefault(cliente.Id));
     }
 
     public Resultado<LojaConfiguracaoResponse> AtualizarConfiguracaoLoja(AtualizarLojaConfiguracaoRequest request)
@@ -1491,7 +1518,7 @@ public sealed class LojaService
             : 0;
     }
 
-    public Resultado<VendaLoja> RegistrarVendaLoja(RegistrarVendaLojaRequest request)
+    public Resultado<VendaLoja> RegistrarVendaLoja(RegistrarVendaLojaRequest request, string? usuario = null)
     {
         if (request.Itens.Count == 0)
         {
@@ -1587,6 +1614,41 @@ public sealed class LojaService
                 return Resultado<VendaLoja>.Falha("Cliente nao encontrado.");
             }
 
+            if (request.FormaPagamento == FormaPagamento.Troca)
+            {
+                return Resultado<VendaLoja>.Falha("Para trocar peças, use o botão Trocar na venda original.");
+            }
+
+            DateTime? vencimentoFiado = null;
+            if (request.FormaPagamento == FormaPagamento.Fiado)
+            {
+                if (cliente is null)
+                {
+                    return Resultado<VendaLoja>.Falha("Venda no fiado precisa de cliente. Escolha ou cadastre a cliente.");
+                }
+
+                vencimentoFiado = NormalizarDataVencimento(request.VencimentoEm) ?? NormalizarDataVencimento(HojeLocal().AddDays(30));
+                if (vencimentoFiado < NormalizarDataVencimento(HojeLocal()))
+                {
+                    return Resultado<VendaLoja>.Falha("O vencimento do fiado nao pode ser uma data passada.");
+                }
+
+                valorRecebido = 0;
+            }
+
+            var parcelas = request.FormaPagamento == FormaPagamento.CartaoCredito
+                ? Math.Clamp(request.Parcelas ?? 1, 1, 12)
+                : 1;
+
+            Vendedor? vendedor = null;
+            if (request.VendedorId is Guid vendedorId)
+            {
+                if (!_vendedores.TryGetValue(vendedorId, out vendedor) || !vendedor.Ativo)
+                {
+                    return Resultado<VendaLoja>.Falha("Vendedora nao encontrada ou inativa.");
+                }
+            }
+
             var venda = new VendaLoja
             {
                 ClienteId = cliente?.Id,
@@ -1595,7 +1657,13 @@ public sealed class LojaService
                 Itens = itensVenda,
                 Desconto = desconto,
                 ValorRecebido = valorRecebido,
-                Observacao = NormalizarTextoOpcional(request.Observacao)
+                Observacao = NormalizarTextoOpcional(request.Observacao),
+                Parcelas = parcelas,
+                VendedorId = vendedor?.Id,
+                VendedorNome = vendedor?.Nome,
+                ComissaoPercentual = vendedor?.ComissaoPercentual ?? 0,
+                VencimentoEm = vencimentoFiado,
+                RegistradaPor = NormalizarTextoOpcional(usuario)
             };
 
             foreach (var item in itensAgrupados)
@@ -1671,6 +1739,11 @@ public sealed class LojaService
             if (vendaOriginal.Devolvida)
             {
                 return Resultado<TrocaVendaLojaResponse>.Falha("Essa venda ja foi devolvida.");
+            }
+
+            if (request.FormaPagamento == FormaPagamento.Fiado && vendaOriginal.ClienteId is null)
+            {
+                return Resultado<TrocaVendaLojaResponse>.Falha("Diferença no fiado precisa de venda com cliente.");
             }
 
             var itensParaDevolverResultado = PrepararItensDevolucao(vendaOriginal, request.ItensDevolvidos);
@@ -1760,6 +1833,12 @@ public sealed class LojaService
             {
                 ClienteId = vendaOriginal.ClienteId,
                 ClienteNome = vendaOriginal.ClienteNome,
+                VendedorId = vendaOriginal.VendedorId,
+                VendedorNome = vendaOriginal.VendedorNome,
+                ComissaoPercentual = vendaOriginal.ComissaoPercentual,
+                VencimentoEm = request.FormaPagamento == FormaPagamento.Fiado
+                    ? NormalizarDataVencimento(HojeLocal().AddDays(30))
+                    : null,
                 FormaPagamento = request.FormaPagamento,
                 Itens = itensVendaTroca,
                 Desconto = 0,
@@ -2773,6 +2852,7 @@ public sealed class LojaService
             """);
         GarantirColuna(connection, "Clientes", "CodigoRecuperacaoHash", "TEXT NULL");
         GarantirColuna(connection, "Clientes", "CodigoRecuperacaoExpiraEm", "TEXT NULL");
+        GarantirColuna(connection, "Clientes", "DataNascimento", "TEXT NULL");
 
         ExecuteNonQuery(connection, null, """
             CREATE TABLE IF NOT EXISTS UsuariosPainel (
@@ -2855,6 +2935,16 @@ public sealed class LojaService
         GarantirColuna(connection, "VendasLoja", "MotivoDevolucao", "TEXT NULL");
         GarantirColuna(connection, "VendasLoja", "ClienteId", "TEXT NULL");
         GarantirColuna(connection, "VendasLoja", "ClienteNome", "TEXT NULL");
+        GarantirColuna(connection, "VendasLoja", "Parcelas", "INTEGER NOT NULL DEFAULT 1");
+        GarantirColuna(connection, "VendasLoja", "VendedorId", "TEXT NULL");
+        GarantirColuna(connection, "VendasLoja", "VendedorNome", "TEXT NULL");
+        GarantirColuna(connection, "VendasLoja", "ComissaoPercentual", "TEXT NOT NULL DEFAULT '0'");
+        GarantirColuna(connection, "VendasLoja", "VencimentoEm", "TEXT NULL");
+        GarantirColuna(connection, "VendasLoja", "RegistradaPor", "TEXT NULL");
+        GarantirColuna(connection, "VendasLoja", "Cancelada", "INTEGER NOT NULL DEFAULT 0");
+        GarantirColuna(connection, "VendasLoja", "CanceladaEm", "TEXT NULL");
+        GarantirColuna(connection, "VendasLoja", "CanceladaPor", "TEXT NULL");
+        GarantirColuna(connection, "VendasLoja", "MotivoCancelamento", "TEXT NULL");
 
         ExecuteNonQuery(connection, null, """
             CREATE TABLE IF NOT EXISTS PedidosOnline (
@@ -3133,6 +3223,8 @@ public sealed class LojaService
                 AtualizadoEm TEXT NOT NULL
             );
             """);
+
+        InicializarTabelasOperacao(connection);
     }
 
     private bool ZerarEstoqueParaEntregaSePendente()
@@ -3258,6 +3350,7 @@ public sealed class LojaService
         CarregarConfiguracaoLoja(connection);
         CarregarCupons(connection);
         CarregarOpcoesEntrega(connection);
+        CarregarDadosOperacao(connection);
     }
 
     private void SalvarTudo()
@@ -3336,6 +3429,8 @@ public sealed class LojaService
             SalvarOpcaoEntrega(connection, transaction, opcao);
         }
 
+        SalvarDadosOperacao(connection, transaction);
+
         transaction.Commit();
     }
 
@@ -3370,6 +3465,7 @@ public sealed class LojaService
                 Nome = ReadString(reader, "Nome"),
                 Email = ReadString(reader, "Email"),
                 Telefone = ReadNullableString(reader, "Telefone"),
+                DataNascimento = ReadNullableString(reader, "DataNascimento"),
                 SenhaHash = ReadString(reader, "SenhaHash"),
                 CodigoRecuperacaoHash = ReadNullableString(reader, "CodigoRecuperacaoHash"),
                 CodigoRecuperacaoExpiraEm = ReadNullableDateTime(reader, "CodigoRecuperacaoExpiraEm"),
@@ -3485,6 +3581,16 @@ public sealed class LojaService
                 Devolvida = ReadBool(reader, "Devolvida"),
                 DevolvidaEm = ReadNullableDateTime(reader, "DevolvidaEm"),
                 MotivoDevolucao = ReadNullableString(reader, "MotivoDevolucao"),
+                Parcelas = Math.Max(1, ReadInt(reader, "Parcelas")),
+                VendedorId = ReadNullableGuid(reader, "VendedorId"),
+                VendedorNome = ReadNullableString(reader, "VendedorNome"),
+                ComissaoPercentual = ReadDecimal(reader, "ComissaoPercentual"),
+                VencimentoEm = ReadNullableDateTime(reader, "VencimentoEm"),
+                RegistradaPor = ReadNullableString(reader, "RegistradaPor"),
+                Cancelada = ReadBool(reader, "Cancelada"),
+                CanceladaEm = ReadNullableDateTime(reader, "CanceladaEm"),
+                CanceladaPor = ReadNullableString(reader, "CanceladaPor"),
+                MotivoCancelamento = ReadNullableString(reader, "MotivoCancelamento"),
                 CriadaEm = ReadDateTime(reader, "CriadaEm")
             };
 
@@ -3743,9 +3849,10 @@ public sealed class LojaService
     private void SalvarCliente(SqliteConnection connection, SqliteTransaction transaction, Cliente cliente)
     {
         using var command = CreateCommand(connection, transaction, """
-            INSERT INTO Clientes (Id, Nome, Email, Telefone, SenhaHash, CodigoRecuperacaoHash, CodigoRecuperacaoExpiraEm, CriadoEm, AtualizadoEm)
-            VALUES ($Id, $Nome, $Email, $Telefone, $SenhaHash, $CodigoRecuperacaoHash, $CodigoRecuperacaoExpiraEm, $CriadoEm, $AtualizadoEm);
+            INSERT INTO Clientes (Id, Nome, Email, Telefone, DataNascimento, SenhaHash, CodigoRecuperacaoHash, CodigoRecuperacaoExpiraEm, CriadoEm, AtualizadoEm)
+            VALUES ($Id, $Nome, $Email, $Telefone, $DataNascimento, $SenhaHash, $CodigoRecuperacaoHash, $CodigoRecuperacaoExpiraEm, $CriadoEm, $AtualizadoEm);
             """);
+        Add(command, "$DataNascimento", cliente.DataNascimento);
         Add(command, "$Id", cliente.Id);
         Add(command, "$Nome", cliente.Nome);
         Add(command, "$Email", cliente.Email);
@@ -3843,11 +3950,25 @@ public sealed class LojaService
         using var command = CreateCommand(connection, transaction, """
             INSERT INTO VendasLoja (
                 Id, ClienteId, ClienteNome, FormaPagamento, ItensJson, Desconto, ValorRecebido,
-                Observacao, Devolvida, DevolvidaEm, MotivoDevolucao, CriadaEm)
+                Observacao, Devolvida, DevolvidaEm, MotivoDevolucao, Parcelas, VendedorId, VendedorNome,
+                ComissaoPercentual, VencimentoEm, RegistradaPor, Cancelada, CanceladaEm, CanceladaPor,
+                MotivoCancelamento, CriadaEm)
             VALUES (
                 $Id, $ClienteId, $ClienteNome, $FormaPagamento, $ItensJson, $Desconto, $ValorRecebido,
-                $Observacao, $Devolvida, $DevolvidaEm, $MotivoDevolucao, $CriadaEm);
+                $Observacao, $Devolvida, $DevolvidaEm, $MotivoDevolucao, $Parcelas, $VendedorId, $VendedorNome,
+                $ComissaoPercentual, $VencimentoEm, $RegistradaPor, $Cancelada, $CanceladaEm, $CanceladaPor,
+                $MotivoCancelamento, $CriadaEm);
             """);
+        Add(command, "$Parcelas", venda.Parcelas);
+        Add(command, "$VendedorId", venda.VendedorId);
+        Add(command, "$VendedorNome", venda.VendedorNome);
+        Add(command, "$ComissaoPercentual", venda.ComissaoPercentual);
+        Add(command, "$VencimentoEm", venda.VencimentoEm);
+        Add(command, "$RegistradaPor", venda.RegistradaPor);
+        Add(command, "$Cancelada", venda.Cancelada);
+        Add(command, "$CanceladaEm", venda.CanceladaEm);
+        Add(command, "$CanceladaPor", venda.CanceladaPor);
+        Add(command, "$MotivoCancelamento", venda.MotivoCancelamento);
         Add(command, "$Id", venda.Id);
         Add(command, "$ClienteId", venda.ClienteId);
         Add(command, "$ClienteNome", venda.ClienteNome);
