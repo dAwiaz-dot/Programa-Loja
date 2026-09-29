@@ -42,8 +42,54 @@
 3. Adicione ao carrinho.
 4. Escolha forma de pagamento.
 5. Aplique desconto, se necessário.
-6. Finalize a venda.
-7. O estoque baixa automaticamente.
+6. Escolha a vendedora (o sistema lembra a última usada no aparelho).
+7. No crédito, escolha em quantas vezes.
+8. Finalize a venda.
+9. O estoque baixa automaticamente.
+
+## Caixa do dia
+
+1. Abra `Caixa` e informe o troco que está na gaveta.
+2. Durante o dia, registre retiradas (sangria) e entradas de troco (reforço).
+3. No fim do dia, conte o dinheiro da gaveta e digite em `Fechar caixa`.
+4. O sistema mostra se sobrou ou faltou e guarda o fechamento no histórico.
+
+## Crediário (fiado)
+
+1. No `PDV`, escolha `Fiado`, a quantidade de parcelas (1x a 12x) e a data da 1ª parcela.
+2. As próximas parcelas vencem de 30 em 30 dias. A prévia aparece antes de finalizar.
+3. A cliente precisa estar escolhida e ter WhatsApp cadastrado (dá pra cadastrar ali mesmo).
+4. No comprovante, clique em `Enviar parcelas no WhatsApp` pra mandar o resumo pra cliente.
+5. Quando tiver parcela vencendo hoje, atrasada ou nos próximos 3 dias, aparece um aviso no topo do painel.
+6. Em `Fiado > Lembretes de vencimento`, use `Lembrar` ou `Cobrar` pra abrir o WhatsApp com a mensagem pronta.
+7. Quando a cliente pagar, clique em `Receber`, informe o valor e a forma. Pode ser parcial.
+8. Pagamento de fiado em dinheiro entra na conta do caixa.
+
+## Vendas, cancelamento e devolução
+
+- `Vendas` mostra o histórico com filtro por período, pagamento e busca.
+- `Comprovante` reimprime ou copia.
+- `Cancelar` é pra venda lançada errado: pede motivo, devolve as peças ao estoque e tira a venda dos relatórios. O caixa só cancela vendas do dia; o admin cancela qualquer uma.
+- `Devolver` e `Trocar` são pra quando a cliente traz a peça de volta.
+- Em `Vendedoras no período` aparece quanto cada uma vendeu e a comissão.
+
+## Vendedoras
+
+Em `Usuários > Vendedoras`, cadastre o nome e a % de comissão. Vendedora inativa some do PDV mas continua nos relatórios.
+
+## Contagem de estoque
+
+1. Em `Estoque`, clique em `Começar contagem`.
+2. Bipe o código da etiqueta (cada leitura soma 1) ou digite a quantidade contada.
+3. A contagem fica salva no aparelho, dá pra parar e continuar depois.
+4. Marque `Só diferenças` pra revisar o que não bateu.
+5. Clique em `Aplicar ajustes`. Só as linhas contadas mudam.
+
+## Clientes
+
+- Cadastre o aniversário da cliente pra ela aparecer em `Aniversariantes` (próximos 30 dias).
+- `Sumidas` lista quem comprou antes e não volta há mais de 60 dias.
+- Os botões de WhatsApp já abrem com a mensagem pronta.
 
 ## Como acompanhar pedidos online
 

@@ -3480,3 +3480,109 @@ a.button {
 #customerForm {
     margin-bottom: 22px;
 }
+
+/* ---------- Crediário ---------- */
+
+.due-alert {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    border: 1px solid var(--info-soft);
+    border-radius: var(--radius);
+    background: var(--info-soft);
+    color: var(--info);
+    padding: 10px 14px;
+    margin-bottom: 18px;
+}
+
+.due-alert.is-urgent {
+    border-color: rgba(161, 58, 76, 0.3);
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.credit-plan-preview {
+    display: grid;
+    gap: 4px;
+}
+
+.credit-plan-preview div,
+.installment-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-radius: 6px;
+    background: var(--surface);
+    font-size: 13px;
+    padding: 6px 10px;
+}
+
+.credit-installments {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.credit-installments details summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 4px 0;
+}
+
+.installment-row {
+    border: 1px solid var(--line);
+    background: var(--surface-soft);
+}
+
+.installment-row > span:first-child {
+    flex: 1;
+}
+
+.installment-row.is-atrasada {
+    border-color: rgba(161, 58, 76, 0.35);
+}
+
+.reminder-item.is-atrasada {
+    border-color: rgba(161, 58, 76, 0.35);
+    background: var(--danger-soft);
+}
+
+.reminder-item.is-vencehoje {
+    border-color: rgba(196, 140, 45, 0.45);
+    background: var(--warning-soft);
+}
+
+.reminder-item .table-actions {
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.pdv-phone-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+}
+
+.pdv-phone-row.is-required input {
+    border-color: var(--danger);
+}
+
+.receipt-credit-plan {
+    display: grid;
+    gap: 2px;
+    border-top: 1px dashed var(--line);
+    padding-top: 8px;
+}
+
+.receipt-credit-plan > span {
+    font-weight: 700;
+}
+
+.receipt-actions a.button {
+    grid-column: 1 / -1;
+    justify-content: center;
+}

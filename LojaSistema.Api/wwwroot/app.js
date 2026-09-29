@@ -34,6 +34,7 @@ const state = {
     cash: null,
     cashHistory: [],
     credit: [],
+    creditReminders: [],
     sellers: [],
     creditSelectedId: null,
     creditStatement: null,
@@ -913,7 +914,11 @@ const stateLoaders = {
     backups: async () => { state.backups = can("viewReports") ? await api("/backup/arquivos") : []; },
     cash: async () => { state.cash = can("usePdv") ? (await api("/caixa/atual")).caixa : null; },
     cashHistory: async () => { state.cashHistory = can("usePdv") ? await api("/caixa/historico") : []; },
-    credit: async () => { state.credit = can("usePdv") ? await api("/fiado") : []; },
+    credit: async () => {
+        [state.credit, state.creditReminders] = can("usePdv")
+            ? await Promise.all([api("/fiado"), api("/fiado/lembretes?dias=30")])
+            : [[], []];
+    },
     sellers: async () => { state.sellers = can("usePdv") ? await api("/vendedores") : []; }
 };
 
@@ -2247,6 +2252,8 @@ function renderCart() {
     if (state.returnMode === "exchange" && !els.returnModal.classList.contains("hidden")) {
         renderExchangeSummary();
     }
+
+    renderCreditPlanPreview();
 }
 
 function renderStockValueSummary() {
@@ -4331,6 +4338,13 @@ async function finishSale() {
         return;
     }
 
+    if (formaPagamento === "Fiado" && !state.customersSimple.find((customer) => customer.id === els.saleCustomer.value)?.telefone) {
+        els.saleExtraDetails.open = true;
+        document.querySelector("#saleCustomerPhone")?.focus();
+        showToast("Cadastre o WhatsApp da cliente pra ela receber os lembretes das parcelas.");
+        return;
+    }
+
     try {
         const sale = await api("/pdv/vendas", {
             method: "POST",
@@ -4340,7 +4354,9 @@ async function finishSale() {
                 valorRecebido: valorRecebido || total,
                 observacao: emptyToNull(els.saleNote.value),
                 clienteId: emptyToNull(els.saleCustomer.value),
-                parcelas: formaPagamento === "CartaoCredito" ? Number(els.saleInstallments.value || 1) : 1,
+                parcelas: formaPagamento === "CartaoCredito"
+                    ? Number(els.saleInstallments.value || 1)
+                    : formaPagamento === "Fiado" ? Number(els.saleCreditInstallments.value || 1) : 1,
                 vendedorId: emptyToNull(els.saleSeller.value),
                 vencimentoEm: formaPagamento === "Fiado" ? emptyToNull(els.saleDueDate.value) : null,
                 itens: state.cart.map((item) => ({
@@ -4587,12 +4603,7 @@ function renderReceipt(sale) {
                 <strong>${currency.format(sale.total)}</strong>
             </div>
         ` : ""}
-        ${sale.formaPagamento === "Fiado" ? `
-            <div class="receipt-total">
-                <span>No fiado · vence em</span>
-                <strong>${formatShortDate(sale.vencimentoEm)}</strong>
-            </div>
-        ` : `
+        ${sale.formaPagamento === "Fiado" ? renderReceiptCreditPlan(sale) : `
             <div class="receipt-total">
                 <span>Recebido</span>
                 <strong>${currency.format(sale.valorRecebido || sale.total)}</strong>
@@ -4609,6 +4620,7 @@ function renderReceipt(sale) {
         <div class="receipt-actions">
             <button class="button button-secondary" type="button" data-receipt-action="copy">Copiar</button>
             <button class="button button-secondary" type="button" data-receipt-action="print">Imprimir</button>
+            ${renderReceiptWhatsapp(sale)}
         </div>
     `;
 }
@@ -4742,7 +4754,9 @@ function buildSaleReceiptText(sale) {
         `Total: ${currency.format(sale.totalOriginal ?? sale.total)}`,
         sale.valorDevolvido ? `Devolvido: ${currency.format(sale.valorDevolvido)}` : null,
         sale.valorDevolvido ? `Total líquido: ${currency.format(sale.total)}` : null,
-        sale.formaPagamento === "Fiado" ? `No fiado, vence em ${formatShortDate(sale.vencimentoEm)}` : `Recebido: ${currency.format(sale.valorRecebido || sale.total)}`,
+        sale.formaPagamento === "Fiado"
+            ? `Crediário:\n${buildCreditPlan(sale).map((item) => `${item.numero}ª parcela: ${currency.format(item.valor)} - vence ${formatShortDate(item.vencimento)}`).join("\n")}`
+            : `Recebido: ${currency.format(sale.valorRecebido || sale.total)}`,
         sale.formaPagamento === "Fiado" ? null : `Troco: ${currency.format(sale.troco || 0)}`,
         sale.cancelada && sale.motivoCancelamento ? `Cancelada: ${sale.motivoCancelamento}` : null,
         sale.observacao ? `Observação: ${sale.observacao}` : null,

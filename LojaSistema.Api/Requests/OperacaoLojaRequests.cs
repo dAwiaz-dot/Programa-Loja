@@ -10,6 +10,8 @@ public sealed record FecharCaixaRequest(decimal ValorContado, string? Observacao
 
 public sealed record RecebimentoFiadoRequest(decimal Valor, FormaPagamento FormaPagamento, string? Observacao);
 
+public sealed record AtualizarTelefoneClienteRequest(string? Telefone);
+
 public sealed record VendedorRequest(string Nome, decimal ComissaoPercentual, bool Ativo);
 
 public sealed record ContagemEstoqueRequest(string? Observacao, IReadOnlyList<ItemContagemEstoqueRequest> Itens);

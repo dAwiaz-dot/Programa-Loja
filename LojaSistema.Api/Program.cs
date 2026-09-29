@@ -891,6 +891,21 @@ app.MapPost("/caixa/fechar", (FecharCaixaRequest request, LojaService loja, Http
 app.MapGet("/fiado", (LojaService loja) => Results.Ok(loja.ListarFiado()))
     .RequireAuthorization("CanUsePdv");
 
+app.MapGet("/fiado/lembretes", (LojaService loja, int? dias) => Results.Ok(loja.ListarLembretesFiado(dias ?? 3)))
+    .RequireAuthorization("CanUsePdv");
+
+app.MapPut("/clientes-simples/{id:guid}/telefone", (Guid id, AtualizarTelefoneClienteRequest request, LojaService loja, HttpContext context) =>
+{
+    var resultado = loja.AtualizarTelefoneCliente(id, request.Telefone);
+    if (!resultado.Sucesso)
+    {
+        return Results.BadRequest(new { erro = resultado.Erro });
+    }
+
+    loja.RegistrarAtividadePainel(UsuarioPainelAtual(context), "WhatsApp do cliente atualizado", resultado.Valor!.Nome);
+    return Results.Ok(resultado.Valor);
+}).RequireAuthorization("CanUsePdv");
+
 app.MapGet("/fiado/{clienteId:guid}", (Guid clienteId, LojaService loja) =>
 {
     var resultado = loja.ObterExtratoFiado(clienteId);
@@ -1112,6 +1127,7 @@ static bool IsApiRequest(HttpRequest request)
         request.Path.StartsWithSegments("/usuarios-painel") ||
         request.Path.StartsWithSegments("/atividades-painel") ||
         request.Path.StartsWithSegments("/clientes-painel") ||
+        request.Path.StartsWithSegments("/clientes-simples") ||
         request.Path.StartsWithSegments("/loja-configuracao") ||
         request.Path.StartsWithSegments("/estoque") ||
         request.Path.StartsWithSegments("/pdv") ||

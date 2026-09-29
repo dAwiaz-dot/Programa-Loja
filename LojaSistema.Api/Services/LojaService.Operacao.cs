@@ -461,23 +461,10 @@ public sealed partial class LojaService
         var totalComprado = compras.Sum(venda => venda.Total);
         var totalPago = pagamentos.Sum(item => item.Valor);
 
-        // Pagamentos quitam as compras mais antigas primeiro; o vencimento que
-        // importa é o da compra mais antiga que ainda tem valor em aberto.
-        DateTime? vencimento = null;
-        var creditoRestante = totalPago;
-        foreach (var compra in compras.Where(venda => venda.Total > 0))
-        {
-            if (creditoRestante >= compra.Total)
-            {
-                creditoRestante -= compra.Total;
-                continue;
-            }
-
-            vencimento = compra.VencimentoEm ?? compra.CriadaEm.AddDays(30);
-            break;
-        }
-
-        var diasAtraso = vencimento is null ? 0 : Math.Max(0, (HojeLocal() - vencimento.Value.Date).Days);
+        // O vencimento que importa é o da parcela mais antiga ainda em aberto.
+        var proximaParcela = CalcularParcelasFiado(clienteId).FirstOrDefault(parcela => parcela.Restante > 0);
+        DateTime? vencimento = proximaParcela?.Vencimento;
+        var diasAtraso = proximaParcela is null ? 0 : Math.Max(0, -proximaParcela.DiasParaVencer);
         return new FiadoClienteResponse(
             clienteId,
             cliente?.Nome ?? compras.LastOrDefault()?.ClienteNome ?? pagamentos.LastOrDefault()?.ClienteNome ?? "Cliente removido",
@@ -565,15 +552,126 @@ public sealed partial class LojaService
             }
 
             extrato.Reverse();
-            return Resultado<FiadoExtratoResponse>.Ok(new FiadoExtratoResponse(ConstruirResumoFiado(clienteId), extrato));
+            return Resultado<FiadoExtratoResponse>.Ok(new FiadoExtratoResponse(
+                ConstruirResumoFiado(clienteId),
+                extrato,
+                CalcularParcelasFiado(clienteId)));
         }
+    }
+
+    // Cada compra no fiado vira N parcelas de 30 em 30 dias a partir do
+    // primeiro vencimento. Os pagamentos da cliente quitam as parcelas na
+    // ordem de vencimento (a mais antiga primeiro). Tudo é recalculado na hora,
+    // então devolução/cancelamento ajustam as parcelas sozinhos.
+    private List<ParcelaFiadoResponse> CalcularParcelasFiado(Guid clienteId)
+    {
+        var hoje = HojeLocal();
+        var parcelas = new List<(VendaLoja Venda, int Numero, int Total, decimal Valor, DateTime Vencimento)>();
+        foreach (var venda in _vendasLoja.Where(venda =>
+            venda.FormaPagamento == FormaPagamento.Fiado &&
+            venda.ClienteId == clienteId &&
+            venda.Total > 0))
+        {
+            var quantidade = Math.Max(1, venda.Parcelas);
+            var primeiroVencimento = venda.VencimentoEm ?? NormalizarDataVencimento(DataLocal(venda.CriadaEm).AddDays(30))!.Value;
+            var valorBase = Math.Floor(venda.Total / quantidade * 100) / 100;
+            for (var numero = 1; numero <= quantidade; numero++)
+            {
+                var valor = numero == quantidade ? venda.Total - valorBase * (quantidade - 1) : valorBase;
+                parcelas.Add((venda, numero, quantidade, valor, primeiroVencimento.AddDays(30 * (numero - 1))));
+            }
+        }
+
+        var credito = _recebimentosFiado.Where(item => item.ClienteId == clienteId).Sum(item => item.Valor);
+        var resultado = new List<ParcelaFiadoResponse>();
+        foreach (var parcela in parcelas
+            .OrderBy(item => item.Vencimento)
+            .ThenBy(item => item.Venda.CriadaEm)
+            .ThenBy(item => item.Numero))
+        {
+            var pago = Math.Min(credito, parcela.Valor);
+            credito -= pago;
+            var restante = parcela.Valor - pago;
+            var diasParaVencer = (parcela.Vencimento.Date - hoje).Days;
+            var status = restante <= 0 ? "Paga" : diasParaVencer < 0 ? "Atrasada" : diasParaVencer == 0 ? "VenceHoje" : "AVencer";
+            resultado.Add(new ParcelaFiadoResponse(
+                parcela.Venda.Id,
+                parcela.Venda.Id.ToString()[..8].ToUpperInvariant(),
+                parcela.Venda.CriadaEm,
+                parcela.Numero,
+                parcela.Total,
+                parcela.Valor,
+                pago,
+                restante,
+                parcela.Vencimento,
+                status,
+                diasParaVencer));
+        }
+
+        return resultado;
+    }
+
+    public IReadOnlyList<LembreteFiadoResponse> ListarLembretesFiado(int diasAFrente)
+    {
+        var limite = Math.Clamp(diasAFrente, 0, 60);
+        lock (_sync)
+        {
+            var clientes = _vendasLoja
+                .Where(venda => venda.FormaPagamento == FormaPagamento.Fiado && venda.ClienteId is not null)
+                .Select(venda => venda.ClienteId!.Value)
+                .Distinct()
+                .ToList();
+            var saldos = CalcularSaldosFiado();
+
+            return clientes
+                .SelectMany(clienteId =>
+                {
+                    _clientes.TryGetValue(clienteId, out var cliente);
+                    var nome = cliente?.Nome ?? _vendasLoja.Last(venda => venda.ClienteId == clienteId).ClienteNome ?? "Cliente";
+                    return CalcularParcelasFiado(clienteId)
+                        .Where(parcela => parcela.Restante > 0 && parcela.DiasParaVencer <= limite)
+                        .Select(parcela => new LembreteFiadoResponse(
+                            clienteId,
+                            nome,
+                            cliente?.Telefone,
+                            saldos.GetValueOrDefault(clienteId),
+                            parcela));
+                })
+                .OrderBy(item => item.Parcela.DiasParaVencer)
+                .ThenBy(item => item.ClienteNome)
+                .ToList();
+        }
+    }
+
+    public Resultado<ClienteSimplesResponse> AtualizarTelefoneCliente(Guid clienteId, string? telefone)
+    {
+        var telefoneNormalizado = NormalizarTextoOpcional(telefone);
+        if (telefoneNormalizado is null || telefoneNormalizado.Count(char.IsDigit) < 10)
+        {
+            return Resultado<ClienteSimplesResponse>.Falha("Informe o WhatsApp com DDD, ex: (35) 99999-9999.");
+        }
+
+        lock (_sync)
+        {
+            if (!_clientes.TryGetValue(clienteId, out var cliente))
+            {
+                return Resultado<ClienteSimplesResponse>.Falha("Cliente nao encontrado.");
+            }
+
+            cliente.Telefone = telefoneNormalizado;
+            cliente.AtualizadoEm = DateTime.UtcNow;
+            SalvarTudo();
+        }
+
+        var atualizado = ListarClientesSimples().First(item => item.Id == clienteId);
+        return Resultado<ClienteSimplesResponse>.Ok(atualizado);
     }
 
     private static string DescreverCompraFiado(VendaLoja venda)
     {
         var codigo = venda.Id.ToString()[..8].ToUpperInvariant();
         var pecas = venda.Itens.Sum(item => item.Quantidade);
-        var descricao = $"Compra #{codigo} · {pecas} peça{(pecas == 1 ? "" : "s")}";
+        var descricao = $"Compra #{codigo} · {pecas} peça{(pecas == 1 ? "" : "s")}{(venda.Parcelas > 1 ? $" · {venda.Parcelas}x" : "")}";
         if (venda.Cancelada)
         {
             return $"{descricao} (cancelada)";

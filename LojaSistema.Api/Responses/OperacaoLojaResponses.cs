@@ -45,7 +45,29 @@ public sealed record FiadoLancamentoResponse(
 
 public sealed record FiadoExtratoResponse(
     FiadoClienteResponse Resumo,
-    IReadOnlyList<FiadoLancamentoResponse> Lancamentos);
+    IReadOnlyList<FiadoLancamentoResponse> Lancamentos,
+    IReadOnlyList<ParcelaFiadoResponse> Parcelas);
+
+// Status: "Paga", "Atrasada", "VenceHoje" ou "AVencer".
+public sealed record ParcelaFiadoResponse(
+    Guid VendaId,
+    string VendaCodigo,
+    DateTime CompraEm,
+    int Numero,
+    int TotalParcelas,
+    decimal Valor,
+    decimal Pago,
+    decimal Restante,
+    DateTime Vencimento,
+    string Status,
+    int DiasParaVencer);
+
+public sealed record LembreteFiadoResponse(
+    Guid ClienteId,
+    string ClienteNome,
+    string? Telefone,
+    decimal SaldoCliente,
+    ParcelaFiadoResponse Parcela);
 
 public sealed record ContagemEstoqueResponse(
     int ItensConferidos,

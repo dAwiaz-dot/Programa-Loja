@@ -1627,6 +1627,11 @@ public sealed partial class LojaService
                     return Resultado<VendaLoja>.Falha("Venda no fiado precisa de cliente. Escolha ou cadastre a cliente.");
                 }
 
+                if (string.IsNullOrWhiteSpace(cliente.Telefone))
+                {
+                    return Resultado<VendaLoja>.Falha("Cadastre o WhatsApp da cliente pra ela receber os lembretes das parcelas.");
+                }
+
                 vencimentoFiado = NormalizarDataVencimento(request.VencimentoEm) ?? NormalizarDataVencimento(HojeLocal().AddDays(30));
                 if (vencimentoFiado < NormalizarDataVencimento(HojeLocal()))
                 {
@@ -1636,7 +1641,7 @@ public sealed partial class LojaService
                 valorRecebido = 0;
             }
 
-            var parcelas = request.FormaPagamento == FormaPagamento.CartaoCredito
+            var parcelas = request.FormaPagamento is FormaPagamento.CartaoCredito or FormaPagamento.Fiado
                 ? Math.Clamp(request.Parcelas ?? 1, 1, 12)
                 : 1;
 

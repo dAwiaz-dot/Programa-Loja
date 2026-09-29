@@ -8,7 +8,8 @@ const INACTIVE_CUSTOMER_DAYS = 60;
 
 function cacheOperacaoElements() {
     const ids = [
-        "pdvCashStatus", "saleSeller", "saleInstallmentsBox", "saleInstallments", "saleCreditBox", "saleDueDate",
+        "pdvCashStatus", "saleCreditInstallments", "saleCreditPreview", "dueAlert", "creditReminderNote",
+        "creditReminderFilter", "creditReminderList", "creditInstallmentList", "saleSeller", "saleInstallmentsBox", "saleInstallments", "saleCreditBox", "saleDueDate",
         "saleExtraDetails", "quickCustomerButton", "saleCustomerInfo",
         "sellerRankingTable",
         "cashMetricExpected", "cashMetricSold", "cashMetricCount", "cashMetricCredit", "cashSessionNote",
@@ -48,6 +49,31 @@ function bindOperacaoEvents() {
         writeStorage(SELLER_STORAGE_KEY, els.saleSeller.value);
     });
     els.saleCustomer.addEventListener("change", renderSaleCustomerInfo);
+    els.saleCreditInstallments.addEventListener("change", renderCreditPlanPreview);
+    els.saleDueDate.addEventListener("change", renderCreditPlanPreview);
+    els.saleCustomerInfo.addEventListener("click", (event) => {
+        if (event.target.closest("[data-save-phone]")) {
+            saveSaleCustomerPhone();
+        }
+    });
+    els.saleCustomerInfo.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && event.target.id === "saleCustomerPhone") {
+            event.preventDefault();
+            saveSaleCustomerPhone();
+        }
+    });
+    els.dueAlert.addEventListener("click", (event) => {
+        if (event.target.closest("[data-go-credit]")) {
+            showView("credit");
+        }
+    });
+    els.creditReminderFilter.addEventListener("change", renderCreditReminders);
+    els.creditReminderList.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-credit-open]");
+        if (button) {
+            loadCreditStatement(button.dataset.creditOpen);
+        }
+    });
     els.quickCustomerButton.addEventListener("click", openQuickCustomerDialog);
     els.closeQuickCustomerButton.addEventListener("click", closeQuickCustomerDialog);
     els.quickCustomerForm.addEventListener("submit", submitQuickCustomer);
@@ -221,7 +247,9 @@ function formatSalePayment(sale) {
     }
 
     if (sale.formaPagamento === "Fiado" && sale.vencimentoEm) {
-        return `${label} · vence ${formatShortDate(sale.vencimentoEm)}`;
+        return Number(sale.parcelas) > 1
+            ? `${label} ${sale.parcelas}x · 1ª vence ${formatShortDate(sale.vencimentoEm)}`
+            : `${label} · vence ${formatShortDate(sale.vencimentoEm)}`;
     }
 
     return label;
@@ -268,10 +296,13 @@ function updatePdvPaymentExtras() {
     }
 
     els.saleDueDate.min = localDateKey(new Date());
+    renderCreditPlanPreview();
+    renderSaleCustomerInfo();
 }
 
 function resetPdvPaymentExtras() {
     els.saleInstallments.value = "1";
+    els.saleCreditInstallments.value = "1";
     els.saleDueDate.value = "";
     const pix = document.querySelector("input[name='payment'][value='Pix']");
     if (pix) {
@@ -331,6 +362,12 @@ function renderSaleCustomerInfo() {
     els.saleCustomerInfo.innerHTML = `
         <span>${escapeHtml(parts.join(" · "))}</span>
         ${alerts.length ? `<div>${alerts.join(" ")}</div>` : ""}
+        ${customer.telefone ? "" : `
+            <div class="pdv-phone-row${getSelectedPayment() === "Fiado" ? " is-required" : ""}">
+                <input id="saleCustomerPhone" type="tel" autocomplete="off" placeholder="WhatsApp da cliente (35) 99999-9999">
+                <button class="button button-secondary" type="button" data-save-phone>Salvar</button>
+            </div>
+        `}
     `;
 }
 
@@ -794,6 +831,7 @@ function renderCredit() {
     }
 
     renderCreditStatement();
+    renderCreditReminders();
 }
 
 async function loadCreditStatement(clienteId) {
@@ -814,10 +852,12 @@ function renderCreditStatement() {
         els.creditStatementNote.textContent = "Escolha uma cliente na lista";
         els.creditPaymentForm.classList.add("hidden");
         els.creditStatementList.innerHTML = "";
+        els.creditInstallmentList.innerHTML = "";
         return;
     }
 
     const resumo = statement.resumo;
+    renderCreditInstallments();
     els.creditStatementTitle.textContent = resumo.nome;
     els.creditStatementNote.textContent = resumo.saldo > 0.004
         ? `Deve ${currency.format(resumo.saldo)}${resumo.vencimentoEm ? ` · vence ${formatShortDate(resumo.vencimentoEm)}` : ""}`
@@ -1198,4 +1238,239 @@ async function applyStockCount() {
     } catch (error) {
         showToast(error.message);
     }
+}
+
+// ---------- Crediário: parcelas, lembretes e WhatsApp ----------
+
+function parseDueDate(value) {
+    if (!value) {
+        return null;
+    }
+
+    // "yyyy-MM-dd" do input vira meio-dia local; ISO do servidor já vem com hora.
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : new Date(value);
+}
+
+// Mesmo cálculo do servidor: parcelas iguais (a última absorve os centavos),
+// vencendo de 30 em 30 dias a partir da primeira.
+function buildCreditPlan({ total, parcelas, vencimentoEm }) {
+    const quantidade = Math.max(1, Number(parcelas) || 1);
+    const valorTotal = Number(total || 0);
+    const base = Math.floor((valorTotal / quantidade) * 100) / 100;
+    const primeira = parseDueDate(vencimentoEm) || new Date();
+    return Array.from({ length: quantidade }, (_, index) => {
+        const vencimento = new Date(primeira);
+        vencimento.setDate(vencimento.getDate() + 30 * index);
+        return {
+            numero: index + 1,
+            total: quantidade,
+            valor: index === quantidade - 1 ? Math.round((valorTotal - base * (quantidade - 1)) * 100) / 100 : base,
+            vencimento
+        };
+    });
+}
+
+function formatDueDistance(days) {
+    if (days === 0) {
+        return "vence hoje";
+    }
+
+    return days > 0
+        ? `vence em ${days} dia${days === 1 ? "" : "s"}`
+        : `atrasada há ${Math.abs(days)} dia${days === -1 ? "" : "s"}`;
+}
+
+function renderCreditPlanPreview() {
+    if (!els.saleCreditPreview) {
+        return;
+    }
+
+    if (getSelectedPayment() !== "Fiado" || state.cart.length === 0) {
+        els.saleCreditPreview.innerHTML = "";
+        return;
+    }
+
+    const total = Math.max(0, cartTotal() - getSaleDiscount());
+    const plan = buildCreditPlan({
+        total,
+        parcelas: els.saleCreditInstallments.value,
+        vencimentoEm: els.saleDueDate.value
+    });
+    els.saleCreditPreview.innerHTML = plan.map((item) => `
+        <div>
+            <span>${item.numero}ª parcela · ${formatShortDate(item.vencimento)}</span>
+            <strong>${currency.format(item.valor)}</strong>
+        </div>
+    `).join("");
+}
+
+async function saveSaleCustomerPhone() {
+    const input = document.querySelector("#saleCustomerPhone");
+    const customerId = els.saleCustomer.value;
+    if (!input || !customerId) {
+        return;
+    }
+
+    try {
+        await api(`/clientes-simples/${customerId}/telefone`, {
+            method: "PUT",
+            body: JSON.stringify({ telefone: input.value })
+        });
+        await refreshScoped(can("viewCustomers") ? ["customersSimple", "customers"] : ["customersSimple"]);
+        renderSaleCustomerInfo();
+        showToast("WhatsApp da cliente salvo.");
+    } catch (error) {
+        showToast(error.message);
+    }
+}
+
+function buildPurchaseMessage(sale) {
+    const plan = buildCreditPlan(sale);
+    const lines = plan.map((item) => `${item.numero}ª parcela: ${currency.format(item.valor)} - vence ${formatShortDate(item.vencimento)}`);
+    return [
+        `Oi ${firstName(sale.clienteNome)}! Aqui é da Nana Modas. Obrigada pela compra de hoje (${formatShortDate(sale.criadaEm)})!`,
+        "",
+        `Seu crediário de ${currency.format(sale.total)} ficou assim:`,
+        ...lines,
+        "",
+        "Pode pagar por Pix ou aqui na loja. A gente te lembra por aqui perto de cada vencimento."
+    ].join("\n");
+}
+
+function buildReminderMessage(reminder) {
+    const parcela = reminder.parcela;
+    const nome = firstName(reminder.clienteNome);
+    const valor = currency.format(parcela.restante);
+    const identificacao = `a parcela ${parcela.numero}/${parcela.totalParcelas} do seu crediário (compra de ${formatShortDate(parcela.compraEm)})`;
+    if (parcela.status === "Atrasada") {
+        return `Oi ${nome}, tudo bem? Aqui é da Nana Modas. Passando pra avisar que ${identificacao}, no valor de ${valor}, venceu em ${formatShortDate(parcela.vencimento)}. Pode pagar por Pix ou aqui na loja. Se já pagou, desconsidera! Obrigada.`;
+    }
+
+    if (parcela.status === "VenceHoje") {
+        return `Oi ${nome}, tudo bem? Aqui é da Nana Modas. Hoje vence ${identificacao}, no valor de ${valor}. Pode pagar por Pix ou aqui na loja. Obrigada!`;
+    }
+
+    return `Oi ${nome}, tudo bem? Aqui é da Nana Modas. Só lembrando que ${identificacao}, no valor de ${valor}, vence em ${formatShortDate(parcela.vencimento)}. Pode pagar por Pix ou aqui na loja. Obrigada!`;
+}
+
+function renderReceiptCreditPlan(sale) {
+    return `
+        <div class="receipt-credit-plan">
+            <span>Crediário em ${Math.max(1, sale.parcelas || 1)}x</span>
+            ${buildCreditPlan(sale).map((item) => `
+                <div class="receipt-total">
+                    <span>${item.numero}ª parcela · vence ${formatShortDate(item.vencimento)}</span>
+                    <strong>${currency.format(item.valor)}</strong>
+                </div>
+            `).join("")}
+        </div>
+    `;
+}
+
+function renderReceiptWhatsapp(sale) {
+    if (sale.formaPagamento !== "Fiado" || sale.cancelada) {
+        return "";
+    }
+
+    const customer = state.customersSimple.find((item) => item.id === sale.clienteId);
+    return whatsappButton(customer?.telefone, buildPurchaseMessage(sale), "Enviar parcelas no WhatsApp");
+}
+
+function reminderBadge(parcela) {
+    if (parcela.status === "Atrasada") {
+        return `<span class="badge badge-danger">${formatDueDistance(parcela.diasParaVencer)}</span>`;
+    }
+
+    return parcela.status === "VenceHoje"
+        ? '<span class="badge badge-warn">Vence hoje</span>'
+        : `<span class="badge badge-info">${formatDueDistance(parcela.diasParaVencer)}</span>`;
+}
+
+function renderCreditReminders() {
+    if (!els.creditReminderList) {
+        return;
+    }
+
+    renderDueAlert();
+    const limit = Number(els.creditReminderFilter.value);
+    const reminders = (state.creditReminders || []).filter((item) => item.parcela.diasParaVencer <= limit);
+    const total = reminders.reduce((sum, item) => sum + item.parcela.restante, 0);
+    els.creditReminderNote.textContent = reminders.length
+        ? `${reminders.length} parcela${reminders.length === 1 ? "" : "s"} · ${currency.format(total)} a receber`
+        : "Nenhuma parcela nesse período";
+    els.creditReminderList.innerHTML = reminders.length
+        ? reminders.map((item) => `
+            <div class="list-item reminder-item is-${item.parcela.status.toLowerCase()}">
+                <div>
+                    <strong>${escapeHtml(item.clienteNome)} · ${currency.format(item.parcela.restante)}</strong>
+                    <span>Parcela ${item.parcela.numero}/${item.parcela.totalParcelas} · vence ${formatShortDate(item.parcela.vencimento)} · compra #${escapeHtml(item.parcela.vendaCodigo)} de ${formatShortDate(item.parcela.compraEm)}${item.telefone ? ` · ${escapeHtml(item.telefone)}` : ""}</span>
+                </div>
+                <div class="table-actions">
+                    ${reminderBadge(item.parcela)}
+                    ${whatsappButton(item.telefone, buildReminderMessage(item), item.parcela.status === "AVencer" ? "Lembrar" : "Cobrar") || '<span class="panel-note">Sem WhatsApp</span>'}
+                    <button class="button button-ghost" type="button" data-credit-open="${item.clienteId}">Receber</button>
+                </div>
+            </div>
+        `).join("")
+        : `<div class="empty-state">Nenhuma parcela vencendo nesse período.</div>`;
+}
+
+function renderDueAlert() {
+    if (!els.dueAlert) {
+        return;
+    }
+
+    const reminders = state.creditReminders || [];
+    const overdue = reminders.filter((item) => item.parcela.diasParaVencer < 0);
+    const today = reminders.filter((item) => item.parcela.diasParaVencer === 0);
+    const soon = reminders.filter((item) => item.parcela.diasParaVencer > 0 && item.parcela.diasParaVencer <= 3);
+    if (!can("usePdv") || !(overdue.length || today.length || soon.length)) {
+        els.dueAlert.classList.add("hidden");
+        els.dueAlert.innerHTML = "";
+        return;
+    }
+
+    const parts = [
+        today.length ? `<strong>${today.length} parcela${today.length === 1 ? "" : "s"} vence${today.length === 1 ? "" : "m"} hoje</strong>` : null,
+        overdue.length ? `<strong>${overdue.length} atrasada${overdue.length === 1 ? "" : "s"}</strong>` : null,
+        soon.length ? `${soon.length} nos próximos 3 dias` : null
+    ].filter(Boolean);
+    els.dueAlert.className = `due-alert${overdue.length || today.length ? " is-urgent" : ""}`;
+    els.dueAlert.innerHTML = `
+        <span>Crediário: ${parts.join(" · ")}</span>
+        <button class="button button-secondary" type="button" data-go-credit>Ver lembretes</button>
+    `;
+}
+
+function renderCreditInstallments() {
+    if (!els.creditInstallmentList) {
+        return;
+    }
+
+    const parcelas = state.creditStatement?.parcelas || [];
+    const open = parcelas.filter((item) => item.restante > 0);
+    const paid = parcelas.filter((item) => item.restante <= 0);
+    if (!parcelas.length) {
+        els.creditInstallmentList.innerHTML = "";
+        return;
+    }
+
+    const row = (item) => `
+        <div class="installment-row is-${item.status.toLowerCase()}">
+            <span>${item.numero}/${item.totalParcelas} · #${escapeHtml(item.vendaCodigo)}</span>
+            <span>${formatShortDate(item.vencimento)}</span>
+            <strong>${currency.format(item.restante > 0 ? item.restante : item.valor)}</strong>
+            ${{
+                Paga: '<span class="badge badge-ok">Paga</span>',
+                Atrasada: '<span class="badge badge-danger">Atrasada</span>',
+                VenceHoje: '<span class="badge badge-warn">Hoje</span>'
+            }[item.status] || '<span class="badge badge-muted">Aberta</span>'}
+        </div>
+    `;
+    els.creditInstallmentList.innerHTML = `
+        <h3 class="cash-subtitle">Parcelas</h3>
+        ${open.map(row).join("")}
+        ${paid.length ? `<details><summary>${paid.length} parcela${paid.length === 1 ? "" : "s"} paga${paid.length === 1 ? "" : "s"}</summary>${paid.map(row).join("")}</details>` : ""}
+        <h3 class="cash-subtitle">Movimentação</h3>
+    `;
 }

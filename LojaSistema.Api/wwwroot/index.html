@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&family=Fraunces:ital,wght@0,600;0,700;1,500;1,600&family=Manrope:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="/styles.css?v=20260929-2">
+    <link rel="stylesheet" href="/styles.css?v=20260929-3">
 </head>
 <body>
     <div class="app-shell">
@@ -63,6 +63,8 @@
                     <button class="button button-ghost" id="logoutButton" type="button">Sair</button>
                 </div>
             </header>
+
+            <div class="due-alert hidden" id="dueAlert" role="status"></div>
 
             <section class="view is-active" data-view="dashboard">
                 <div class="dash-root">
@@ -1341,11 +1343,31 @@
                             </label>
 
                             <div class="pdv-payment-extra hidden" id="saleCreditBox">
-                                <label>
-                                    Vencimento do fiado
-                                    <input id="saleDueDate" type="date">
-                                </label>
-                                <span class="panel-note">Fiado precisa de cliente: escolha abaixo em "Desconto, cliente e observação".</span>
+                                <div class="pdv-money-grid">
+                                    <label>
+                                        Parcelas
+                                        <select id="saleCreditInstallments">
+                                            <option value="1">1x (30 dias)</option>
+                                            <option value="2">2x</option>
+                                            <option value="3">3x</option>
+                                            <option value="4">4x</option>
+                                            <option value="5">5x</option>
+                                            <option value="6">6x</option>
+                                            <option value="7">7x</option>
+                                            <option value="8">8x</option>
+                                            <option value="9">9x</option>
+                                            <option value="10">10x</option>
+                                            <option value="11">11x</option>
+                                            <option value="12">12x</option>
+                                        </select>
+                                    </label>
+                                    <label>
+                                        1ª parcela vence em
+                                        <input id="saleDueDate" type="date">
+                                    </label>
+                                </div>
+                                <div class="credit-plan-preview" id="saleCreditPreview"></div>
+                                <span class="panel-note">Crediário precisa de cliente com WhatsApp: escolha abaixo em "Desconto, cliente e observação". As próximas parcelas vencem de 30 em 30 dias.</span>
                             </div>
 
                             <details class="pdv-extra-details" id="saleExtraDetails">
@@ -1624,6 +1646,22 @@
                     </article>
                 </div>
 
+                <section class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Lembretes de vencimento</h2>
+                            <span class="panel-note" id="creditReminderNote">Parcelas em aberto</span>
+                        </div>
+                        <select class="search-input" id="creditReminderFilter" aria-label="Período dos lembretes">
+                            <option value="0">Vencidas e vencendo hoje</option>
+                            <option value="3" selected>Até 3 dias</option>
+                            <option value="7">Próximos 7 dias</option>
+                            <option value="30">Próximos 30 dias</option>
+                        </select>
+                    </div>
+                    <div class="compact-list" id="creditReminderList"></div>
+                </section>
+
                 <div class="workspace-grid workspace-grid-wide">
                     <section class="panel">
                         <div class="panel-header">
@@ -1688,6 +1726,7 @@
                             </div>
                         </form>
 
+                        <div class="credit-installments" id="creditInstallmentList"></div>
                         <div class="compact-list" id="creditStatementList"></div>
                     </aside>
                 </div>
@@ -2396,7 +2435,7 @@
 
     <script src="/barcode.js?v=20260829-1" defer></script>
     <!-- operacao.js só declara funções; vem antes porque o app.js referencia elas ao montar o scopeRenderers. -->
-    <script src="/operacao.js?v=20260929-2" defer></script>
-    <script src="/app.js?v=20260929-2" defer></script>
+    <script src="/operacao.js?v=20260929-3" defer></script>
+    <script src="/app.js?v=20260929-3" defer></script>
 </body>
 </html>
